@@ -57,4 +57,9 @@ export class OOMap<T extends object> {
       }
     }
   }
+
+  get(key: keyof T): T[keyof T] {
+    return this.__live[key]
+  }
+  set(key: keyof T, value: T[keyof T]): void {}
 }
