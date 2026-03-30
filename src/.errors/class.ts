@@ -1,4 +1,4 @@
-export type ORMapErrorCode = ''
+export type ORMapErrorCode = 'BAD_SNAPSHOT'
 
 export class ORMapError extends Error {
   readonly code: ORMapErrorCode
