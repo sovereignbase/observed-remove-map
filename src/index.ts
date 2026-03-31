@@ -1,14 +1,17 @@
 export { OOStruct } from './OOStruct/class.js'
-export { OOStructError } from './.errors/class.js'
+export type { OOStructErrorCode } from './.errors/class.js'
 export type {
-  OOStructDelta,
+  OOStructEventMap,
   OOStructEventListener,
   OOStructEventListenerFor,
-  OOStructEventMap,
-  OOStructKey,
-  OOStructMergeResult,
+  /***/
   OOStructSnapshot,
   OOStructSnapshotEntry,
+  /***/
   OOStructState,
   OOStructStateEntry,
+  /***/
+  OOStructDelta,
+  /***/
+  OOStructChanges,
 } from './.types/index.js'

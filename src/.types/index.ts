@@ -1,14 +1,14 @@
-export type OOStructKey<T extends object> = Extract<keyof T, string>
-
 export type OOStructSnapshotEntry<V> = {
   __uuidv7: string
   __value: V
+  __after: string
   __overwrites: Array<string>
 }
 
 export type OOStructStateEntry<V> = {
   __uuidv7: string
   __value: V
+  __after: string
   __overwrites: Set<string>
 }
 
@@ -22,12 +22,12 @@ export type OOStructState<T extends object> = {
 
 export type OOStructDelta<T extends object> = Partial<OOStructSnapshot<T>>
 
-export type OOStructMergeResult<T extends object> = Partial<T>
+export type OOStructChanges<T extends object> = Partial<T>
 
 export type OOStructEventMap<T extends object> = {
   snapshot: OOStructSnapshot<T>
   delta: OOStructDelta<T>
-  merge: OOStructMergeResult<T>
+  change: OOStructChanges<T>
 }
 
 export type OOStructEventListener<

@@ -1,4 +1,4 @@
-export type OOStructErrorCode = 'BAD_SNAPSHOT'
+export type OOStructErrorCode = ''
 
 export class OOStructError extends Error {
   readonly code: OOStructErrorCode

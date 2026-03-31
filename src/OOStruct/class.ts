@@ -1,164 +1,166 @@
 import { v7 as uuidv7 } from 'uuid'
-import { OOStructError } from '../.errors/class.js'
 import type {
+  OOStructChanges,
   OOStructDelta,
   OOStructEventListenerFor,
   OOStructEventMap,
-  OOStructMergeResult,
   OOStructSnapshot,
   OOStructSnapshotEntry,
   OOStructState,
   OOStructStateEntry,
 } from '../.types/index.js'
-import { isUuidV7 } from './isUuidV7/index.js'
+import { parseSnapshotEntryToStateEntry } from './parseSnapshotEntryToStateEntry/index.js'
+import { parseStateEntryToSnapshotEntry } from './parseStateEntryToSnapshotEntry/index.js'
 
 export class OOStruct<T extends object> {
   private readonly eventTarget = new EventTarget()
   private readonly __defaults: T
   private readonly __state: OOStructState<T>
   private __live: T
-
   constructor(
     defaults: { [K in keyof T]: T[K] },
-    snapshot?: OOStructSnapshot<T>,
+    snapshot?: OOStructSnapshot<T>
   ) {
-    this.__defaults = { ...defaults } as T
-    this.__live = {} as T
+    this.__defaults = { ...defaults }
     this.__state = {} as OOStructState<T>
+    this.__live = {} as T
 
-    if (snapshot === undefined) {
-      for (const [rawKey, rawValue] of Object.entries(defaults)) {
-        const key = rawKey as keyof T
-        const value = rawValue as T[keyof T]
+    const snapshotIsObject = typeof snapshot === 'object'
 
-        this.__live[key] = value
-        this.__state[key] = {
-          __uuidv7: uuidv7(),
-          __value: value,
-          __overwrites: new Set([]),
+    for (const key of Object.keys(defaults)) {
+      const defaultValue = defaults[key as keyof T]
+      if (snapshotIsObject && Object.hasOwn(snapshot, key)) {
+        const valid = parseSnapshotEntryToStateEntry(
+          defaultValue,
+          snapshot[key as keyof T]
+        )
+        if (valid) {
+          this.__live[key as keyof T] = valid.__value
+          this.__state[key as keyof T] = valid
+          continue
         }
       }
-
-      return
-    }
-
-    const seen = new Set<string>()
-
-    for (const [rawKey, rawValue] of Object.entries(snapshot)) {
-      if (!Object.hasOwn(defaults, rawKey)) {
-        throw new OOStructError('BAD_SNAPSHOT', 'Malformed snapshot.')
-      }
-
-      const key = rawKey as keyof T
-      const entry = this.parseSnapshotEntry(rawValue)
-
-      this.__live[key] = entry.__value as T[keyof T]
-      this.__state[key] = entry as OOStructState<T>[keyof T]
-      seen.add(rawKey)
-    }
-
-    for (const rawKey of Object.keys(defaults)) {
-      if (!seen.has(rawKey)) {
-        throw new OOStructError('BAD_SNAPSHOT', 'Malformed snapshot.')
+      this.__live[key as keyof T] = defaultValue
+      this.__state[key as keyof T] = {
+        __uuidv7: uuidv7(),
+        __after: '',
+        __value: defaultValue,
+        __overwrites: new Set([]),
       }
     }
+  }
+
+  static create<T extends object>(
+    defaults: { [K in keyof T]: T[K] },
+    snapshot?: OOStructSnapshot<T>
+  ): OOStruct<T> {
+    return new OOStruct(defaults, snapshot)
   }
 
   read<K extends keyof T>(key: K): T[K] {
     return this.__live[key]
   }
 
-  write<K extends keyof T>(key: K, value: T[K]): void {
-    this.overwrite(key, value)
-
-    const delta = {} as OOStructDelta<T>
-    delta[key] = this.snapshotEntry(key)
-    this.dispatch('delta', delta)
+  update<K extends keyof T>(key: K, value: T[K]): void {
+    const delta: OOStructDelta<T> = {}
+    const changes: OOStructChanges<T> = {}
+    delta[key] = this.overwriteAndReturnSnapshotEntry(key, value)
+    changes[key] = value
+    this.eventTarget.dispatchEvent(new CustomEvent('delta', { detail: delta }))
+    this.eventTarget.dispatchEvent(
+      new CustomEvent('change', { detail: changes })
+    )
   }
 
-  reset(key?: keyof T): void {
-    const delta = {} as OOStructDelta<T>
+  delete<K extends keyof T>(key?: K): void {
+    const delta: OOStructDelta<T> = {}
+    const changes: OOStructChanges<T> = {}
 
-    if (key !== undefined) {
-      this.overwrite(key, this.__defaults[key])
-      delta[key] = this.snapshotEntry(key)
+    if (key && Object.hasOwn(this.__defaults, key)) {
+      const value = this.__defaults[key]
+      delta[key] = this.overwriteAndReturnSnapshotEntry(key, value)
+      changes[key] = value
     } else {
-      for (const rawKey of Object.keys(this.__defaults)) {
-        const nextKey = rawKey as keyof T
-        this.overwrite(nextKey, this.__defaults[nextKey])
-        delta[nextKey] = this.snapshotEntry(nextKey)
+      for (const [key, value] of Object.entries(this.__defaults)) {
+        delta[key as K] = this.overwriteAndReturnSnapshotEntry(
+          key as K,
+          value as T[K]
+        )
+        changes[key as K] = value as T[K]
       }
+      this.eventTarget.dispatchEvent(
+        new CustomEvent('delta', { detail: delta })
+      )
+      this.eventTarget.dispatchEvent(
+        new CustomEvent('change', { detail: changes })
+      )
     }
-
-    this.dispatch('delta', delta)
   }
 
-  merge(ingress: Partial<OOStructSnapshot<T>>): void {
-    if (!ingress || typeof ingress !== 'object' || Array.isArray(ingress)) {
-      throw new OOStructError('BAD_SNAPSHOT', 'Malformed snapshot.')
+  merge<K extends keyof T>(replica: OOStructDelta<T>): void {
+    if (!replica || typeof replica !== 'object' || Array.isArray(replica))
+      return
+
+    const delta: OOStructDelta<T> = {}
+    const changes: OOStructChanges<T> = {}
+
+    for (const [key, value] of Object.entries(replica)) {
+      if (!Object.hasOwn(this.__state, key)) continue
+
+      const canditate = parseSnapshotEntryToStateEntry(
+        this.__defaults[key as K],
+        value as OOStructSnapshotEntry<T[K]>
+      )
+      if (!canditate) continue
+
+      const target = this.__state[key as K]
+      const current = { ...target }
+
+      for (const overwrite of canditate.__overwrites) {
+        if (target.__overwrites.has(overwrite)) continue
+        target.__overwrites.add(overwrite)
+      }
+
+      if (target.__overwrites.has(canditate.__uuidv7)) continue
+
+      if (
+        current.__uuidv7 === canditate.__after ||
+        target.__overwrites.has(current.__uuidv7) ||
+        canditate.__uuidv7 > current.__uuidv7
+      ) {
+        target.__uuidv7 = canditate.__uuidv7
+        target.__value = canditate.__value
+        target.__after = canditate.__after
+        this.__live[key as K] = canditate.__value
+        changes[key as K] = canditate.__value
+        continue
+      }
+
+      target.__overwrites.add(canditate.__uuidv7)
+      delta[key as K] = parseStateEntryToSnapshotEntry(target)
     }
-
-    const changes = {} as OOStructMergeResult<T>
-
-    for (const [rawKey, rawValue] of Object.entries(ingress)) {
-      if (!Object.hasOwn(this.__state, rawKey)) {
-        throw new OOStructError('BAD_SNAPSHOT', 'Malformed snapshot.')
-      }
-
-      const key = rawKey as keyof T
-      const current = this.__state[key]
-      const incoming = this.parseSnapshotEntry(rawValue)
-      const overwrites = new Set(current.__overwrites)
-
-      for (const overwrite of incoming.__overwrites) {
-        overwrites.add(overwrite)
-      }
-
-      let nextUuid = current.__uuidv7
-      let nextValue = current.__value
-
-      if (current.__uuidv7 !== incoming.__uuidv7) {
-        if (current.__overwrites.has(incoming.__uuidv7)) {
-          overwrites.add(incoming.__uuidv7)
-        } else if (incoming.__overwrites.has(current.__uuidv7)) {
-          nextUuid = incoming.__uuidv7
-          nextValue = incoming.__value as T[keyof T]
-          overwrites.add(current.__uuidv7)
-        } else if (current.__uuidv7.localeCompare(incoming.__uuidv7) < 0) {
-          nextUuid = incoming.__uuidv7
-          nextValue = incoming.__value as T[keyof T]
-          overwrites.add(current.__uuidv7)
-        } else {
-          overwrites.add(incoming.__uuidv7)
-        }
-      }
-
-      overwrites.delete(nextUuid)
-
-      if (!this.hasSameState(current, nextUuid, nextValue, overwrites)) {
-        this.__live[key] = nextValue as T[keyof T]
-        this.__state[key] = {
-          __uuidv7: nextUuid,
-          __value: nextValue,
-          __overwrites: overwrites,
-        } as OOStructState<T>[keyof T]
-        changes[key] = nextValue as T[keyof T]
-      }
-    }
-
-    if (Object.keys(changes).length === 0) return
-    this.dispatch('merge', changes)
+    if (Object.keys(delta).length > 0)
+      this.eventTarget.dispatchEvent(
+        new CustomEvent('change', { detail: delta })
+      )
+    if (Object.keys(changes).length > 0)
+      this.eventTarget.dispatchEvent(
+        new CustomEvent('change', { detail: changes })
+      )
   }
 
   snapshot(): void {
     const snapshot = {} as OOStructSnapshot<T>
 
-    for (const rawKey of Object.keys(this.__state)) {
-      const key = rawKey as keyof T
-      snapshot[key] = this.snapshotEntry(key)
+    for (const [key, value] of Object.entries(this.__state)) {
+      snapshot[key as keyof T] = parseStateEntryToSnapshotEntry(
+        value as OOStructStateEntry<T[keyof T]>
+      )
     }
 
-    this.dispatch('snapshot', snapshot)
+    this.eventTarget.dispatchEvent(
+      new CustomEvent('snapshot', { detail: snapshot })
+    )
   }
 
   /**
@@ -168,15 +170,15 @@ export class OOStruct<T extends object> {
    * @param listener - The listener to register.
    * @param options - Listener registration options.
    */
-  addEventListener<K extends string>(
+  addEventListener<K extends keyof OOStructEventMap<T>>(
     type: K,
     listener: OOStructEventListenerFor<T, K> | null,
-    options?: boolean | AddEventListenerOptions,
+    options?: boolean | AddEventListenerOptions
   ): void {
     this.eventTarget.addEventListener(
       type,
       listener as EventListenerOrEventListenerObject | null,
-      options,
+      options
     )
   }
 
@@ -187,95 +189,29 @@ export class OOStruct<T extends object> {
    * @param listener - The listener to remove.
    * @param options - Listener removal options.
    */
-  removeEventListener<K extends string>(
+  removeEventListener<K extends keyof OOStructEventMap<T>>(
     type: K,
     listener: OOStructEventListenerFor<T, K> | null,
-    options?: boolean | EventListenerOptions,
+    options?: boolean | EventListenerOptions
   ): void {
     this.eventTarget.removeEventListener(
       type,
       listener as EventListenerOrEventListenerObject | null,
-      options,
+      options
     )
   }
 
-  private dispatch<K extends keyof OOStructEventMap<T>>(
-    type: K,
-    detail: OOStructEventMap<T>[K],
-  ): void {
-    this.eventTarget.dispatchEvent(new CustomEvent(type, { detail }))
-  }
-
-  private overwrite<K extends keyof T>(key: K, value: T[K]): void {
-    const current = this.__state[key]
-    const overwrites = new Set(current.__overwrites)
-
-    overwrites.add(current.__uuidv7)
-    this.__live[key] = value
-    this.__state[key] = {
-      __uuidv7: uuidv7(),
-      __value: value,
-      __overwrites: overwrites,
-    }
-  }
-
-  private parseSnapshotEntry(
-    value: unknown,
-  ): OOStructStateEntry<T[keyof T]> {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-      throw new OOStructError('BAD_SNAPSHOT', 'Malformed snapshot.')
-    }
-
-    const entry = value as OOStructSnapshotEntry<T[keyof T]>
-    if (!isUuidV7(entry.__uuidv7)) {
-      throw new OOStructError('BAD_SNAPSHOT', 'Malformed snapshot.')
-    }
-    if (!Object.hasOwn(entry, '__value')) {
-      throw new OOStructError('BAD_SNAPSHOT', 'Malformed snapshot.')
-    }
-    if (!Array.isArray(entry.__overwrites)) {
-      throw new OOStructError('BAD_SNAPSHOT', 'Malformed snapshot.')
-    }
-
-    const overwrites = new Set<string>()
-    for (const overwrite of entry.__overwrites) {
-      if (!isUuidV7(overwrite)) continue
-      overwrites.add(overwrite)
-    }
-
-    return {
-      __uuidv7: entry.__uuidv7,
-      __value: entry.__value,
-      __overwrites: overwrites,
-    }
-  }
-
-  private snapshotEntry<K extends keyof T>(
+  private overwriteAndReturnSnapshotEntry<K extends keyof T>(
     key: K,
+    value: T[K]
   ): OOStructSnapshotEntry<T[K]> {
-    const entry = this.__state[key]
-
-    return {
-      __uuidv7: entry.__uuidv7,
-      __value: entry.__value,
-      __overwrites: Array.from(entry.__overwrites),
-    }
-  }
-
-  private hasSameState<K extends keyof T>(
-    current: OOStructStateEntry<T[K]>,
-    nextUuid: string,
-    nextValue: T[K],
-    nextOverwrites: Set<string>,
-  ): boolean {
-    if (current.__uuidv7 !== nextUuid) return false
-    if (current.__value !== nextValue) return false
-    if (current.__overwrites.size !== nextOverwrites.size) return false
-
-    for (const overwrite of current.__overwrites) {
-      if (!nextOverwrites.has(overwrite)) return false
-    }
-
-    return true
+    const target = this.__state[key]
+    const old = { ...target }
+    target.__uuidv7 = uuidv7()
+    target.__value = value
+    target.__after = old.__uuidv7
+    target.__overwrites.add(old.__uuidv7)
+    this.__live[key] = value
+    return parseStateEntryToSnapshotEntry(target)
   }
 }
