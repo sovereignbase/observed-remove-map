@@ -12,7 +12,7 @@ import type {
 import { parseSnapshotEntryToStateEntry } from './parseSnapshotEntryToStateEntry/index.js'
 import { parseStateEntryToSnapshotEntry } from './parseStateEntryToSnapshotEntry/index.js'
 
-export class OOStruct<T extends object> {
+export class OOStruct<T extends Record<string, unknown>> {
   private readonly eventTarget = new EventTarget()
   private readonly __defaults: T
   private readonly __state: OOStructState<T>
@@ -52,7 +52,7 @@ export class OOStruct<T extends object> {
     }
   }
 
-  static create<T extends object>(
+  static create<T extends Record<string, unknown>>(
     defaults: { [K in keyof T]: T[K] },
     snapshot?: OOStructSnapshot<T>
   ): OOStruct<T> {
