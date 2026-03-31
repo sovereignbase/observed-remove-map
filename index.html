@@ -1,8 +1,80 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Observed Overwrite Struct</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Observed Overwrite Struct CRDT Specification</title>
+    <meta
+      name="description"
+      content="Specification and reference JavaScript binding for a UUIDv7-optimized observed-remove set (OR-Set), including delta, merge, snapshot, and tombstone garbage-collection guidance."
+    />
+    <meta
+      name="keywords"
+      content="uuidv7, observed-remove set, or-set, CRDT, tombstones, replication, merge, delta, snapshot, JavaScript, TypeScript"
+    />
+    <meta name="author" content="Jori Lehtinen" />
+    <meta
+      name="robots"
+      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+    />
+    <meta name="application-name" content="observed-remove-set" />
+    <link
+      rel="canonical"
+      href="https://sovereignbase.github.io/observed-remove-set/"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://sovereignbase.github.io/observed-remove-set/sovereignbase_logo.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="https://sovereignbase.github.io/observed-remove-set/sovereignbase_logo.png"
+    />
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:site_name" content="Sovereignbase" />
+    <meta
+      property="og:title"
+      content="Observed Overwrite Struct CRDT Specification"
+    />
+    <meta
+      property="og:description"
+      content="Specification and reference JavaScript binding for a UUIDv7-optimized observed-remove set (OR-Set), including delta, merge, snapshot, and tombstone garbage-collection guidance."
+    />
+    <meta
+      property="og:url"
+      content="https://sovereignbase.github.io/observed-remove-set/"
+    />
+    <meta
+      property="og:image"
+      content="https://sovereignbase.github.io/observed-remove-set/sovereignbase_social_sharing_image.png"
+    />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Sovereignbase social sharing image for the UUIDv7 observed-remove set specification."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Observed Overwrite Struct CRDT Specification"
+    />
+    <meta
+      name="twitter:description"
+      content="Specification and reference JavaScript binding for a UUIDv7-optimized observed-remove set (OR-Set), including delta, merge, snapshot, and tombstone garbage-collection guidance."
+    />
+    <meta
+      name="twitter:image"
+      content="https://sovereignbase.github.io/observed-remove-set/sovereignbase_social_sharing_image.png"
+    />
+    <meta
+      name="twitter:image:alt"
+      content="Sovereignbase social sharing image for the UUIDv7 observed-remove set specification."
+    />
+    <meta name="twitter:creator" content="@jortsupetterson" />
     <script
       src="https://www.w3.org/Tools/respec/respec-w3c"
       class="remove"
@@ -11,83 +83,893 @@
     <script class="remove">
       var respecConfig = {
         specStatus: 'unofficial',
+        shortName: 'uuidv7-orset',
+        github: 'sovereignbase/observed-remove-set',
         latestVersion: null,
         edDraftURI: null,
         editors: [
           { name: 'Jori Lehtinen', url: 'https://github.com/jortsupetterson' },
           {
             name: 'GPT-5.4',
-            url: 'https://openai.com/fi-FI/index/introducing-gpt-5-4/',
+            url: 'https://openai.com/en-US/index/introducing-gpt-5-4/',
           },
         ],
-        github: 'sovereignbase/observed-overwrite-map',
-        shortName: 'oomap',
         xref: 'web-platform',
-        group: 'none',
         lint: {
           'informative-dfn': true,
           'local-refs-exist': true,
           'no-unused-dfns': true,
         },
         localBiblio: {
-          INFRA: {
-            href: 'https://infra.spec.whatwg.org/',
+          RFC9562: {
+            title: 'Universally Unique IDentifiers (UUIDs)',
+            href: 'https://www.rfc-editor.org/rfc/rfc9562',
+            publisher: 'IETF',
+            date: '2024-05',
+          },
+          ORSET: {
+            title: 'An optimized conflict-free replicated set',
+            href: 'https://arxiv.org/abs/1210.3368',
+            publisher: 'arXiv',
+            date: '2012-10-12',
+          },
+          NIK96A: {
+            title: 'Optimised ObservedRemove Set in depth',
+            href: 'https://medium.com/@nik96a/optimised-observedremove-set-in-depth-60770103a650',
+            publisher: '@nik96a',
+            date: '2022-10-31',
           },
         },
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://sovereignbase.github.io/observed-remove-set/#organization",
+            "name": "Sovereignbase",
+            "url": "https://github.com/sovereignbase",
+            "alternateName": ["@sovereignbase"],
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://sovereignbase.github.io/observed-remove-set/sovereignbase_logo.png",
+              "width": 320,
+              "height": 320
+            },
+            "sameAs": [
+              "https://github.com/sovereignbase",
+              "https://jsr.io/@sovereignbase",
+              "https://www.npmjs.com/org/sovereignbase"
+            ]
+          },
+          {
+            "@type": "Person",
+            "@id": "https://sovereignbase.github.io/observed-remove-set/#author",
+            "name": "Jori Lehtinen",
+            "url": "https://github.com/jortsupetterson",
+            "alternateName": ["jortsupetterson", "@jortsupetterson"],
+            "sameAs": [
+              "https://github.com/jortsupetterson",
+              "https://www.npmjs.com/~jortsupetterson",
+              "https://jsr.io/user/ab186a13-a64f-429e-a757-927aa4fa6e6c",
+              "https://linkedin.com/in/jortsupetterson",
+              "https://x.com/jortsupetterson",
+              "https://www.youtube.com/@jortsupetterson"
+            ]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://sovereignbase.github.io/observed-remove-set/#website",
+            "url": "https://sovereignbase.github.io/observed-remove-set/",
+            "name": "observed-remove-set",
+            "inLanguage": "en",
+            "publisher": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#organization"
+            }
+          },
+          {
+            "@type": "SoftwareSourceCode",
+            "@id": "https://sovereignbase.github.io/observed-remove-set/#software",
+            "name": "@sovereignbase/observed-remove-set",
+            "alternateName": ["observed-remove-set", "uuidv7-orset"],
+            "url": "https://sovereignbase.github.io/observed-remove-set/",
+            "description": "UUIDv7-optimized observed-remove set for JavaScript and TypeScript with delta, merge, and snapshot events.",
+            "codeRepository": "https://github.com/sovereignbase/observed-remove-set",
+            "license": "https://www.apache.org/licenses/LICENSE-2.0",
+            "programmingLanguage": ["TypeScript", "JavaScript"],
+            "runtimePlatform": [
+              "Node.js",
+              "Web Browser",
+              "Bun",
+              "Deno",
+              "Cloudflare Workers",
+              "Edge Runtime"
+            ],
+            "keywords": [
+              "crdt",
+              "observed-remove-set",
+              "orset",
+              "uuidv7",
+              "replication",
+              "tombstones",
+              "eventtarget"
+            ],
+            "image": "https://sovereignbase.github.io/observed-remove-set/sovereignbase_social_sharing_image.png",
+            "isAccessibleForFree": true,
+            "author": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#author"
+            },
+            "maintainer": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#organization"
+            },
+            "publisher": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#organization"
+            },
+            "sameAs": [
+              "https://jsr.io/@sovereignbase/observed-remove-set/",
+              "https://www.npmjs.com/package/@sovereignbase/observed-remove-set"
+            ]
+          },
+          {
+            "@type": "TechArticle",
+            "@id": "https://sovereignbase.github.io/observed-remove-set/#specification",
+            "headline": "Observed Overwrite Struct CRDT Specification",
+            "name": "Observed Overwrite Struct CRDT Specification",
+            "url": "https://sovereignbase.github.io/observed-remove-set/",
+            "description": "Specification and reference JavaScript binding for a UUIDv7-optimized observed-remove set (OR-Set), including delta, merge, snapshot, and tombstone garbage-collection guidance.",
+            "inLanguage": "en",
+            "isPartOf": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#website"
+            },
+            "mainEntityOfPage": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#webpage"
+            },
+            "about": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#software"
+            },
+            "author": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#author"
+            },
+            "publisher": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#organization"
+            },
+            "image": {
+              "@type": "ImageObject",
+              "url": "https://sovereignbase.github.io/observed-remove-set/sovereignbase_social_sharing_image.png",
+              "width": 1200,
+              "height": 630
+            }
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://sovereignbase.github.io/observed-remove-set/#webpage",
+            "url": "https://sovereignbase.github.io/observed-remove-set/",
+            "name": "Observed Overwrite Struct CRDT Specification",
+            "description": "Specification and reference JavaScript binding for a UUIDv7-optimized observed-remove set (OR-Set), including delta, merge, snapshot, and tombstone garbage-collection guidance.",
+            "inLanguage": "en",
+            "isPartOf": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#website"
+            },
+            "about": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#software"
+            },
+            "author": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#author"
+            },
+            "publisher": {
+              "@id": "https://sovereignbase.github.io/observed-remove-set/#organization"
+            },
+            "primaryImageOfPage": {
+              "@type": "ImageObject",
+              "url": "https://sovereignbase.github.io/observed-remove-set/sovereignbase_social_sharing_image.png",
+              "width": 1200,
+              "height": 630
+            },
+            "relatedLink": [
+              "https://github.com/sovereignbase",
+              "https://jsr.io/@sovereignbase",
+              "https://www.npmjs.com/org/sovereignbase",
+              "https://github.com/sovereignbase/observed-remove-set",
+              "https://jsr.io/@sovereignbase/observed-remove-set/",
+              "https://www.npmjs.com/package/@sovereignbase/observed-remove-set",
+              "https://github.com/jortsupetterson",
+              "https://www.npmjs.com/~jortsupetterson",
+              "https://jsr.io/user/ab186a13-a64f-429e-a757-927aa4fa6e6c",
+              "https://linkedin.com/in/jortsupetterson",
+              "https://x.com/jortsupetterson",
+              "https://www.youtube.com/@jortsupetterson"
+            ]
+          }
+        ]
       }
     </script>
   </head>
   <body>
     <section id="abstract">
-      <p>The best of LWW Register and OR-Map.</p>
+      <p>
+        This document specifies a state based crdt for creating conflict free
+        object structs, utilizing features from both OR-Map and LWW crdt
+      </p>
     </section>
+
     <section id="sotd">
-      <p>This is required.</p>
+      <p>
+        This is an unofficial specification maintained alongside a reference
+        implementation.
+      </p>
     </section>
+
+    <section id="conformance">
+      <p>
+        The key words <em>MUST</em>, <em>MUST NOT</em>, <em>SHOULD</em>,
+        <em>SHOULD NOT</em>, and <em>MAY</em> in this document are to be
+        interpreted as described in BCP 14 [[RFC2119]] [[RFC8174]] when, and
+        only when, they appear in all capitals.
+      </p>
+      <p>
+        Unless otherwise stated, neutral data-structure and algorithm terms such
+        as <em>list</em>, <em>set</em>, <em>contains</em>, <em>append</em>, and
+        <em>remove</em> are used with the meanings defined by Infra [[INFRA]].
+      </p>
+      <p>
+        A conforming implementation MUST preserve the replica convergence and
+        removal semantics defined by the algorithms in this specification.
+      </p>
+    </section>
+
     <section class="informative">
       <h2>Introduction</h2>
-      <p>Some informative introductory text.</p>
-      <aside class="note" title="A useful note">
-        <p>I'm a note!</p>
+      <p>
+        An OR-Set gives each value a stable identity that can later be marked as
+        tombstoned. In the classic OR-Set, adds are distinguished by fresh
+        unique tags and removes record the observed tagged values [[ORSET]].
+        Once a removed identity has been observed, the removed value no longer
+        needs to remain present for remove semantics.
+      </p>
+      <p>
+        UUIDv7 is a particularly useful identifier format for this purpose
+        [[RFC9562]]. It is fixed-width, designed for time-ordering, and includes
+        enough non-time entropy to keep collision risk negligible for normal
+        distributed application use.
+      </p>
+      <p>This combination gives a practical OR-Set profile:</p>
+      <ul>
+        <li>
+          each add observation receives an identifier that can be minted without
+          central coordination;
+        </li>
+        <li>
+          each tombstone can be represented by a single UUIDv7 identifier;
+        </li>
+        <li>
+          identifier order is useful for indexing, merging, and deployment
+          specific tombstone garbage collection heuristics.
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Terminology</h2>
+      <p>
+        An <dfn>OR-Set replica</dfn> is one independently mutable copy of the
+        data type.
+      </p>
+      <p>
+        An <dfn>identifier</dfn> is the per-add token that distinguishes one
+        observed add from another.
+      </p>
+      <p>
+        A <dfn>UUIDv7 identifier</dfn> is an identifier that is a valid UUID
+        version 7 as defined by [[RFC9562]].
+      </p>
+      <p>
+        A <dfn>stored value</dfn> is a payload value associated with an
+        <a>identifier</a>.
+      </p>
+      <p>
+        A <dfn>live value</dfn> is a <a>stored value</a> whose identifier is
+        present in a replica's live item store and absent from that replica's
+        <a>tombstone</a> set.
+      </p>
+      <p>A <dfn>tombstone</dfn> is an identifier recorded as removed.</p>
+      <p>
+        A <dfn>snapshot</dfn> is a transportable state containing a collection
+        of live values and a collection of tombstones.
+      </p>
+      <p>
+        A <dfn>well-formed snapshot</dfn> is a value that is an object and has a
+        <code>values</code> member whose value is a list and a
+        <code>tombstones</code> member whose value is a list.
+      </p>
+      <p>
+        An <dfn>acknowledgement frontier</dfn> is deployment metadata that
+        states, for a given actor, the greatest identifier below or equal to
+        which that actor will not later surface previously unseen operations.
+      </p>
+    </section>
+
+    <section>
+      <h2>Core Model</h2>
+      <p>Each <a>OR-Set replica</a> maintains two logical collections:</p>
+      <ul>
+        <li>
+          a live value store keyed by <a>identifier</a>, containing the visible
+          <a>live value</a> values; and
+        </li>
+        <li>
+          a <a>tombstone</a> set containing identifiers that have been observed
+          as removed.
+        </li>
+      </ul>
+      <p>
+        Remove semantics depend on identifiers, not on payload equality. A
+        conforming implementation MUST therefore record at least the removed
+        identifier and MAY discard the removed value itself. It MUST NOT require
+        the removed payload to remain available in order to preserve remove
+        semantics.
+      </p>
+      <p>
+        Each live identifier MUST correspond to at most one accepted add
+        observation in a replica's live item store. If multiple candidate live
+        values with the same identifier are received, the first accepted live
+        value MAY be retained and later duplicates MAY be ignored.
+      </p>
+    </section>
+
+    <section>
+      <h2>UUIDv7 Identifier Requirements</h2>
+      <p>
+        A conforming UUIDv7-based OR-Set implementation MUST assign one
+        <a>UUIDv7 identifier</a> to each add observation.
+      </p>
+      <p>
+        Implementations SHOULD preserve a caller supplied UUIDv7 identifier only
+        when that identifier is valid, not currently live, and not already
+        tombstoned.
+      </p>
+      <p>
+        If an implementation needs a total order over identifiers, it MUST
+        compare them by their UUID value. A host MAY compare canonical textual
+        UUID representations directly because UUIDv7 values are intended to be
+        lexicographically sortable in text as well as in raw bytes [[RFC9562]].
+      </p>
+      <aside class="note">
+        <p>
+          UUIDv7 combines a Unix-epoch millisecond time component with
+          additional bits reserved for monotonicity and pseudorandom uniqueness
+          [[RFC9562]]. This makes it a useful fit for OR-Set identifiers that
+          benefit from both local ordering and low collision probability.
+        </p>
       </aside>
     </section>
+
     <section>
-      <h2>A section</h2>
-      <aside class="example">
-        <p>This is an example.</p>
-        <pre class="js">
-        // Automatic syntax highlighting
-        function someJavaScript(){}
-        </pre>
-      </aside>
+      <h2>Replica Semantics</h2>
+
       <section>
-        <h3>I'm a sub-section</h3>
-        <p class="issue" data-number="121">
-          <!-- Issue can automatically be populated from GitHub -->
+        <h3>Add</h3>
+        <p>
+          An add operation MUST produce or adopt one <a>UUIDv7 identifier</a>
+          and associate that identifier with exactly one payload value.
+        </p>
+        <p>
+          If the chosen identifier is already live in the target replica, the
+          add operation MAY be treated as a no-op.
+        </p>
+        <p>
+          If the chosen identifier is tombstoned in the target replica, the add
+          operation MUST NOT resurrect that tombstoned observation. A conforming
+          implementation SHOULD instead mint a fresh UUIDv7 identifier for the
+          new add observation.
+        </p>
+      </section>
+
+      <section>
+        <h3>Remove</h3>
+        <p>
+          A remove operation in the reference JavaScript binding operates over
+          locally visible live state.
+        </p>
+        <p>
+          If a <a>live value</a> with that identifier exists, it MUST be removed
+          from the live value store and the identifier MUST be recorded in the
+          tombstone set.
+        </p>
+        <p>
+          If no <a>live value</a> with that identifier exists in the local
+          replica, the reference JavaScript binding MUST treat the remove
+          operation as a no-op.
+        </p>
+      </section>
+
+      <section>
+        <h3>Merge</h3>
+        <p>
+          Merge operates over a <a>snapshot</a>. A conforming implementation
+          MUST process tombstones before live values from the same incoming
+          snapshot.
+        </p>
+        <p>When merging:</p>
+        <ol class="algorithm">
+          <li>
+            If the incoming value is not a <a>well-formed snapshot</a>, then the
+            implementation MUST reject it.
+          </li>
+          <li>
+            For each incoming tombstone:
+            <ol>
+              <li>
+                If the tombstone is not a valid <a>UUIDv7 identifier</a>,
+                continue.
+              </li>
+              <li>Add the tombstone to the local tombstone set.</li>
+              <li>
+                Remove any live value with the same identifier from the local
+                live value store.
+              </li>
+            </ol>
+          </li>
+          <li>
+            For each incoming live value:
+            <ol>
+              <li>Let <var>id</var> be the value's identifier.</li>
+              <li>
+                If <var>id</var> is not a valid <a>UUIDv7 identifier</a>,
+                continue.
+              </li>
+              <li>
+                If the local tombstone set contains <var>id</var>, continue.
+              </li>
+              <li>
+                If the local live value store already contains <var>id</var>,
+                continue.
+              </li>
+              <li>Insert the live value under <var>id</var>.</li>
+            </ol>
+          </li>
+        </ol>
+        <p>
+          This ordering guarantees that an incoming item whose identifier is
+          tombstoned by the same merge will not be reintroduced as live state.
+        </p>
+      </section>
+
+      <section>
+        <h3>Snapshot</h3>
+        <p>
+          A <a>snapshot</a> MUST contain enough information to recreate the live
+          value store and the <a>tombstone</a> set.
+        </p>
+        <p>
+          A snapshot MAY ignore malformed individual values and malformed
+          individual tombstones so long as malformed top-level input is still
+          rejected.
         </p>
       </section>
     </section>
-    <section data-dfn-for="Foo">
-      <h2>Start your spec!</h2>
-      <pre class="idl">
-        [Exposed=Window]
-        interface Foo {
-        attribute DOMString bar;
-        undefined doTheFoo();
-        };
-      </pre>
-      <p>The <dfn>Foo</dfn> interface represents a {{Foo}}.</p>
+
+    <section>
+      <h2>Tombstone Garbage Collection</h2>
       <p>
-        The <dfn>doTheFoo()</dfn> method does the foo. Call it by running
-        {{Foo/doTheFoo()}}.
+        Tombstone garbage collection is deployment specific. This specification
+        does not require any particular garbage collection strategy.
       </p>
-      <ol class="algorithm">
-        <li>A |variable:DOMString| can be declared like this.</li>
-      </ol>
-    </section>
-    <section id="conformance">
       <p>
-        This is required for specifications that contain normative material.
+        A conforming implementation MAY expose tombstones to application logic
+        so that an external replication layer can decide when collection is
+        safe.
+      </p>
+      <p>
+        A deployment MAY maintain one <a>acknowledgement frontier</a> per actor
+        and update that frontier with the greatest acknowledged UUIDv7
+        identifier for that actor.
+      </p>
+      <p>
+        When acknowledgements are exchanged across trust boundaries, they SHOULD
+        be authenticated, for example by signatures.
+      </p>
+      <p>
+        If a deployment gives each actor frontier the meaning that the actor
+        will not later surface previously unseen operations at identifiers less
+        than or equal to that frontier, then the deployment MAY compute a
+        garbage collection floor as the minimum acknowledged frontier across the
+        relevant actors.
+      </p>
+      <p>
+        Under that stronger acknowledgement model, tombstones whose identifiers
+        are strictly less than the garbage collection floor MAY be deleted.
+      </p>
+      <aside class="note">
+        <p>
+          The safety condition comes from the acknowledgement contract, not from
+          timestamp ordering alone. UUIDv7 ordering makes the frontier compact
+          and practical, but deployments still need a correct rule for what an
+          acknowledgement proves.
+        </p>
+      </aside>
+    </section>
+
+    <section class="informative">
+      <h2>Payload Guidance</h2>
+      <p>
+        This technique is best suited to membership state and static metadata.
+        It is not, by itself, a field-level CRDT for mutating nested object
+        graphs.
+      </p>
+      <p>
+        An implementation MAY shallow-freeze stored values as a low-cost hint
+        that item payloads are not intended to be mutated in place. Such a hint
+        does not create deep replication semantics for nested values.
+      </p>
+    </section>
+
+    <section>
+      <h2>Reference JavaScript Binding</h2>
+      <p>
+        This section defines one conforming JavaScript binding for the model
+        above.
+      </p>
+
+      <section>
+        <h3>API Summary</h3>
+        <pre class="idl">
+[Exposed=*]
+interface ORSet {
+  constructor();
+  constructor(ORSetSnapshot snapshot);
+  readonly attribute unsigned long size;
+  boolean has(any value);
+  undefined append(any value);
+  undefined clear();
+  undefined remove(any value);
+  sequence&lt;any&gt; values();
+  any tombstones();
+  undefined merge(ORSetSnapshot ingress);
+  undefined snapshot();
+  undefined addEventListener(DOMString type, any listener, optional any options);
+  undefined removeEventListener(DOMString type, any listener, optional any options);
+};
+
+dictionary ORSetSnapshot {
+  required sequence&lt;any&gt; values;
+  required sequence&lt;DOMString&gt; tombstones;
+};
+
+dictionary ORSetMergeResult {
+  sequence&lt;DOMString&gt; removals = [];
+  sequence&lt;any&gt; additions = [];
+};
+        </pre>
+      </section>
+
+      <section>
+        <h3>Events</h3>
+        <p>
+          The JavaScript binding maintains an internal
+          <code>EventTarget</code> object as defined by DOM [[DOM]].
+        </p>
+        <p>
+          This binding is not specified as inheriting from
+          <code>EventTarget</code>. Instead, its listener methods forward to
+          that internal event target, and its local mutations and merges
+          dispatch synthetic events through it.
+        </p>
+        <p>
+          The JavaScript binding defines three synthetic event types. Each is a
+          <code>CustomEvent</code> object whose <code>detail</code> attribute is
+          initialized as described below [[DOM]].
+        </p>
+        <dl>
+          <dt><dfn>delta event</dfn></dt>
+          <dd>
+            A <code>CustomEvent</code> whose <code>detail</code> contains only
+            the values and tombstones produced by one local mutation.
+          </dd>
+          <dt><dfn>snapshot event</dfn></dt>
+          <dd>
+            A <code>CustomEvent</code> whose <code>detail</code> is the full
+            current snapshot produced when
+            <a data-link-for="ORSet">snapshot()</a>
+            is invoked.
+          </dd>
+          <dt><dfn>merge event</dfn></dt>
+          <dd>
+            A <code>CustomEvent</code> whose <code>detail</code> contains the
+            added values and removals accepted from an incoming merge.
+          </dd>
+        </dl>
+        <p>A no-op mutation MUST NOT dispatch any event.</p>
+      </section>
+
+      <section>
+        <h3>Errors</h3>
+        <p>
+          If the JavaScript binding rejects a malformed top-level snapshot, it
+          MUST throw an <code>Error</code>-derived object whose
+          <code>name</code> is <code>ORSetError</code> and whose
+          <code>code</code> is <code>BAD_SNAPSHOT</code>.
+        </p>
+      </section>
+
+      <section>
+        <h3>Algorithms</h3>
+
+        <section data-dfn-for="ORSet">
+          <h4><dfn>Constructor</dfn></h4>
+          <ol class="algorithm">
+            <li>Set <var>size</var> to <code>0</code>.</li>
+            <li>
+              Initialize the live value store to an empty object and the
+              tombstone set to an empty set.
+            </li>
+            <li>
+              If <var>snapshot</var> is <code>undefined</code>, then return.
+            </li>
+            <li>
+              If <var>snapshot</var> is not a <a>well-formed snapshot</a>, then
+              throw an <code>ORSetError</code> with code
+              <code>BAD_SNAPSHOT</code>.
+            </li>
+            <li>
+              For each <var>tomb</var> in <var>snapshot</var>'s
+              <code>tombstones</code>:
+              <ol>
+                <li>
+                  If <var>tomb</var> is not a valid <a>UUIDv7 identifier</a>,
+                  continue.
+                </li>
+                <li>Add <var>tomb</var> to the tombstone set.</li>
+              </ol>
+            </li>
+            <li>
+              For each <var>value</var> in <var>snapshot</var>'s
+              <code>values</code>:
+              <ol>
+                <li>
+                  Let <var>id</var> be <var>value</var>'s
+                  <code>__uuidv7</code> member.
+                </li>
+                <li>
+                  If <var>id</var> is not a valid <a>UUIDv7 identifier</a>,
+                  continue.
+                </li>
+                <li>If the tombstone set contains <var>id</var>, continue.</li>
+                <li>
+                  If the live value store already has its own property named
+                  <var>id</var>, continue.
+                </li>
+                <li>
+                  Store <code>Object.freeze(value)</code> in the live value
+                  store at <var>id</var>.
+                </li>
+                <li>Increase <var>size</var> by <code>1</code>.</li>
+              </ol>
+            </li>
+          </ol>
+        </section>
+
+        <section data-dfn-for="ORSet">
+          <h4><dfn>has()</dfn></h4>
+          <ol class="algorithm">
+            <li>
+              Let <var>id</var> be <var>value</var> if <var>value</var> is a
+              string; otherwise let <var>id</var> be
+              <code>value.__uuidv7</code>.
+            </li>
+            <li>
+              Return true if the live value store has its own property named
+              <var>id</var>; otherwise return false.
+            </li>
+          </ol>
+        </section>
+
+        <section data-dfn-for="ORSet">
+          <h4><dfn>append()</dfn></h4>
+          <ol class="algorithm">
+            <li>Let <var>id</var> be <code>value.__uuidv7</code>.</li>
+            <li>
+              If <var>id</var> is a valid <a>UUIDv7 identifier</a> and the live
+              value store already has its own property named <var>id</var>, then
+              return.
+            </li>
+            <li>
+              If <var>id</var> is a valid <a>UUIDv7 identifier</a> and the
+              tombstone set does not contain <var>id</var>, then let
+              <var>stored value</var> be <code>Object.freeze(value)</code>.
+            </li>
+            <li>
+              Otherwise, let <var>stored value</var> be
+              <code>Object.freeze({...value, __uuidv7: new UUIDv7})</code>,
+              where <var>new UUIDv7</var> is freshly generated.
+            </li>
+            <li>
+              Let <var>next id</var> be <var>stored value</var>'s
+              <code>__uuidv7</code>.
+            </li>
+            <li>
+              Store <var>stored value</var> in the live value store at
+              <var>next id</var>.
+            </li>
+            <li>Increase <var>size</var> by <code>1</code>.</li>
+            <li>
+              Dispatch a <a>delta event</a> whose detail contains
+              <code>values: [stored value]</code> and
+              <code>tombstones: []</code>.
+            </li>
+          </ol>
+        </section>
+
+        <section data-dfn-for="ORSet">
+          <h4><dfn>clear()</dfn></h4>
+          <ol class="algorithm">
+            <li>If <var>size</var> is <code>0</code>, then return.</li>
+            <li>Let <var>egress tombstones</var> be a new empty list.</li>
+            <li>
+              For each own property name <var>id</var> of the live value store:
+              <ol>
+                <li>Add <var>id</var> to the tombstone set.</li>
+                <li>Delete the live value store entry at <var>id</var>.</li>
+                <li>Append <var>id</var> to <var>egress tombstones</var>.</li>
+              </ol>
+            </li>
+            <li>Set <var>size</var> to <code>0</code>.</li>
+            <li>
+              Dispatch a <a>delta event</a> whose detail contains
+              <code>values: []</code> and
+              <code>tombstones: egress tombstones</code>.
+            </li>
+          </ol>
+        </section>
+
+        <section data-dfn-for="ORSet">
+          <h4><dfn>remove()</dfn></h4>
+          <ol class="algorithm">
+            <li>
+              Let <var>id</var> be <var>value</var> if <var>value</var> is a
+              string; otherwise let <var>id</var> be
+              <code>value.__uuidv7</code>.
+            </li>
+            <li>
+              Let <var>had item</var> be whether the live value store has its
+              own property named <var>id</var>.
+            </li>
+            <li>If <var>had item</var> is false, then return.</li>
+            <li>Add <var>id</var> to the tombstone set.</li>
+            <li>Delete the live value store entry at <var>id</var>.</li>
+            <li>Decrease <var>size</var> by <code>1</code>.</li>
+            <li>
+              Dispatch a <a>delta event</a> whose detail contains
+              <code>values: []</code> and <code>tombstones: [id]</code>.
+            </li>
+          </ol>
+        </section>
+
+        <section data-dfn-for="ORSet">
+          <h4><dfn>values()</dfn></h4>
+          <p>
+            Return a new list containing the live values in the live value
+            store's enumeration order.
+          </p>
+        </section>
+
+        <section data-dfn-for="ORSet">
+          <h4><dfn>tombstones()</dfn></h4>
+          <p>
+            Return the live tombstone set itself so that application level
+            replication logic can inspect or compact it directly.
+          </p>
+        </section>
+
+        <section data-dfn-for="ORSet">
+          <h4><dfn>merge()</dfn></h4>
+          <ol class="algorithm">
+            <li>
+              If <var>ingress</var> is not a <a>well-formed snapshot</a>, then
+              throw an <code>ORSetError</code> with code
+              <code>BAD_SNAPSHOT</code>.
+            </li>
+            <li>Let <var>additions</var> be a new empty list.</li>
+            <li>Let <var>removals</var> be a new empty list.</li>
+            <li>
+              For each <var>tomb</var> in <var>ingress</var>'s
+              <code>tombstones</code>:
+              <ol>
+                <li>
+                  If the tombstone set already contains <var>tomb</var>,
+                  continue.
+                </li>
+                <li>
+                  If <var>tomb</var> is not a valid <a>UUIDv7 identifier</a>,
+                  continue.
+                </li>
+                <li>
+                  Let <var>had item</var> be whether the live value store has
+                  its own property named <var>tomb</var>.
+                </li>
+                <li>Add <var>tomb</var> to the tombstone set.</li>
+                <li>Delete the live value store entry at <var>tomb</var>.</li>
+                <li>
+                  If <var>had item</var> is true, decrease <var>size</var> by
+                  <code>1</code>.
+                </li>
+                <li>Append <var>tomb</var> to <var>removals</var>.</li>
+              </ol>
+            </li>
+            <li>
+              For each <var>value</var> in <var>ingress</var>'s
+              <code>values</code>:
+              <ol>
+                <li>
+                  Let <var>id</var> be <var>value</var>'s
+                  <code>__uuidv7</code> member.
+                </li>
+                <li>
+                  If <var>id</var> is not a valid <a>UUIDv7 identifier</a>,
+                  continue.
+                </li>
+                <li>If the tombstone set contains <var>id</var>, continue.</li>
+                <li>
+                  If the live value store already has its own property named
+                  <var>id</var>, continue.
+                </li>
+                <li>
+                  Store <code>Object.freeze(value)</code> in the live value
+                  store at <var>id</var>.
+                </li>
+                <li>Increase <var>size</var> by <code>1</code>.</li>
+                <li>Append <var>value</var> to <var>additions</var>.</li>
+              </ol>
+            </li>
+            <li>
+              If <var>additions</var> is empty and <var>removals</var> is empty,
+              then return.
+            </li>
+            <li>
+              Dispatch a <a>merge event</a> whose detail contains
+              <code>additions</code> and <code>removals</code>.
+            </li>
+          </ol>
+        </section>
+
+        <section data-dfn-for="ORSet">
+          <h4><dfn>snapshot()</dfn></h4>
+          <ol class="algorithm">
+            <li>
+              Let <var>snapshot</var> be a new object whose
+              <code>values</code> member is a new list containing the current
+              live values and whose <code>tombstones</code> member is a new list
+              containing the current tombstones.
+            </li>
+            <li>
+              Dispatch a <a>snapshot event</a> whose detail is
+              <var>snapshot</var>.
+            </li>
+            <li>Return <code>undefined</code>.</li>
+          </ol>
+        </section>
+
+        <section data-dfn-for="ORSet">
+          <h4>
+            <dfn>addEventListener()</dfn> and
+            <dfn>removeEventListener()</dfn>
+          </h4>
+          <p>
+            Forward listener registration and listener removal to the binding's
+            internal <code>EventTarget</code> object using the provided type,
+            listener, and options values.
+          </p>
+        </section>
+      </section>
+    </section>
+
+    <section class="informative">
+      <h2>Acknowledgements</h2>
+      <p>
+        This specification builds on the OR-Set literature [[ORSET]], the UUID
+        design in [[RFC9562]], and practical discussions of optimized
+        observed-remove sets such as [[NIK96A]].
       </p>
     </section>
   </body>

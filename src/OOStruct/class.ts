@@ -122,6 +122,21 @@ export class OOStruct<T extends Record<string, unknown>> {
         target.__overwrites.add(overwrite)
       }
 
+      if (current.__uuidv7 === canditate.__uuidv7) {
+        if (current.__after < canditate.__after) {
+          target.__value = canditate.__value
+          target.__after = canditate.__after
+          this.__live[key as K] = canditate.__value
+          changes[key as K] = canditate.__value
+        } else {
+          delta[key as K] = this.overwriteAndReturnSnapshotEntry(
+            key as K,
+            current.__value
+          )
+        }
+        continue
+      }
+
       if (target.__overwrites.has(canditate.__uuidv7)) continue
 
       if (
