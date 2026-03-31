@@ -122,6 +122,8 @@ export class OOStruct<T extends Record<string, unknown>> {
         target.__overwrites.add(overwrite)
       }
 
+      if (target.__overwrites.has(canditate.__uuidv7)) continue
+
       if (current.__uuidv7 === canditate.__uuidv7) {
         if (current.__after < canditate.__after) {
           target.__value = canditate.__value
@@ -136,8 +138,6 @@ export class OOStruct<T extends Record<string, unknown>> {
         }
         continue
       }
-
-      if (target.__overwrites.has(canditate.__uuidv7)) continue
 
       if (
         current.__uuidv7 === canditate.__after ||
