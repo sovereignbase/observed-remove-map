@@ -26,7 +26,7 @@ export class OOStruct<T extends object> {
     this.__live = {} as T
 
     const snapshotIsObject =
-      snapshot && typeof snapshot !== 'object' && !Array.isArray(snapshot)
+      snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot)
 
     for (const key of Object.keys(defaults)) {
       const defaultValue = defaults[key as keyof T]
@@ -44,10 +44,10 @@ export class OOStruct<T extends object> {
       this.__live[key as keyof T] = defaultValue
       const root = uuidv7()
       this.__state[key as keyof T] = {
-        __uuidv7: root,
+        __uuidv7: uuidv7(),
         __after: root,
         __value: defaultValue,
-        __overwrites: new Set([]),
+        __overwrites: new Set([root]),
       }
     }
   }
@@ -78,7 +78,8 @@ export class OOStruct<T extends object> {
     const delta: OOStructDelta<T> = {}
     const changes: OOStructChanges<T> = {}
 
-    if (key && Object.hasOwn(this.__defaults, key)) {
+    if (key) {
+      if (!Object.hasOwn(this.__defaults, key)) return
       const value = this.__defaults[key]
       delta[key] = this.overwriteAndReturnSnapshotEntry(key, value)
       changes[key] = value
