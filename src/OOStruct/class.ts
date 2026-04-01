@@ -62,14 +62,17 @@ export class OOStruct<T extends Record<string, unknown>> {
     return new OOStruct(defaults, snapshot)
   }
 
-  read<K extends keyof T>(key: K): Readonly<T[K]> {
-    return this.__live[key]
+  read<K extends keyof T>(key: K): T[K] {
+    return structuredClone(this.__live[key])
   }
 
   update<K extends keyof T>(key: K, value: T[K]): void {
     const delta: OOStructDelta<T> = {}
     const change: OOStructChange<T> = {}
-    delta[key] = this.overwriteAndReturnSnapshotEntry(key, value)
+    delta[key] = this.overwriteAndReturnSnapshotEntry(
+      key,
+      structuredClone(value)
+    )
     change[key] = value
     this.__eventTarget.dispatchEvent(
       new CustomEvent('delta', { detail: delta })
