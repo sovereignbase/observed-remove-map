@@ -13,6 +13,7 @@ import type {
 } from '../.types/index.js'
 import { parseSnapshotEntryToStateEntry } from './parseSnapshotEntryToStateEntry/index.js'
 import { parseStateEntryToSnapshotEntry } from './parseStateEntryToSnapshotEntry/index.js'
+import { isUuidV7 } from '@sovereignbase/utils'
 
 export class OOStruct<T extends Record<string, unknown>> {
   private readonly __eventTarget = new EventTarget()
@@ -155,6 +156,7 @@ export class OOStruct<T extends Record<string, unknown>> {
         target.__uuidv7 = canditate.__uuidv7
         target.__value = canditate.__value
         target.__after = canditate.__after
+        target.__overwrites.add(current.__uuidv7)
         this.__live[key as K] = canditate.__value
         change[key as K] = canditate.__value
         continue
@@ -195,7 +197,7 @@ export class OOStruct<T extends Record<string, unknown>> {
 
     for (const frontier of frontiers) {
       for (const [key, value] of Object.entries(frontier)) {
-        if (typeof value === 'string') {
+        if (typeof value === 'string' && isUuidV7(value)) {
           if (smallestAcknowledgementsPerKey[key as K] <= value) continue
           smallestAcknowledgementsPerKey[key as K] = value
         }
