@@ -32,7 +32,7 @@ export function parseSnapshotEntryToStateEntry<V>(
 
   return {
     __uuidv7: snapshotEntry.__uuidv7,
-    __value: snapshotEntry.__value,
+    __value: structuredClone(snapshotEntry.__value),
     __after: snapshotEntry.__after,
     __overwrites: overwrites,
   }

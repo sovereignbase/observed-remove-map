@@ -70,7 +70,7 @@ export class OOStruct<T extends Record<string, unknown>> {
   update<K extends keyof T>(key: K, value: T[K]): void {
     if (prototype(value) !== prototype(this.__defaults[key]))
       throw new OOStructError(
-        'TYPE_MISSMATCH',
+        'TYPE_MISMATCH',
         'Values type does not match default values type.'
       )
     const delta: OOStructDelta<T> = {}
