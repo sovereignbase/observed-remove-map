@@ -10,6 +10,7 @@ import type {
   OOStructStateEntry,
   OOStructAck,
 } from '../.types/index.js'
+import { OOStructError } from '../.errors/class.js'
 import { parseSnapshotEntryToStateEntry } from './parseSnapshotEntryToStateEntry/index.js'
 import { parseStateEntryToSnapshotEntry } from './parseStateEntryToSnapshotEntry/index.js'
 import { isUuidV7, prototype } from '@sovereignbase/utils'
@@ -67,7 +68,11 @@ export class OOStruct<T extends Record<string, unknown>> {
   }
 
   update<K extends keyof T>(key: K, value: T[K]): void {
-    if (prototype(value) !== prototype(this.__defaults[key])) return
+    if (prototype(value) !== prototype(this.__defaults[key]))
+      throw new OOStructError(
+        'TYPE_MISSMATCH',
+        'Values type does not match default values type.'
+      )
     const delta: OOStructDelta<T> = {}
     const change: OOStructChange<T> = {}
     delta[key] = this.overwriteAndReturnSnapshotEntry(

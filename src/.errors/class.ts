@@ -1,4 +1,4 @@
-export type OOStructErrorCode = ''
+export type OOStructErrorCode = 'TYPE_MISSMATCH'
 
 export class OOStructError extends Error {
   readonly code: OOStructErrorCode
