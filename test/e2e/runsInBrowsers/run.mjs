@@ -1,9 +1,7 @@
 import { rmSync } from 'node:fs'
-import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createServer } from 'node:net'
 import { spawn } from 'node:child_process'
-import { chromium, firefox, webkit } from 'playwright'
 
 const playwrightBin = resolve(
   process.cwd(),
@@ -61,19 +59,6 @@ async function waitForServer(baseURL, child) {
 }
 
 async function main() {
-  const requiredBrowsers = [
-    chromium.executablePath(),
-    firefox.executablePath(),
-    webkit.executablePath(),
-  ]
-
-  if (requiredBrowsers.some((executable) => !existsSync(executable))) {
-    console.warn(
-      'Skipping browser E2E because Playwright browser binaries are not installed.'
-    )
-    return
-  }
-
   const port = await findOpenPort()
   const baseURL = `http://127.0.0.1:${port}`
   const server = spawn(process.execPath, [browserServerScript], {
