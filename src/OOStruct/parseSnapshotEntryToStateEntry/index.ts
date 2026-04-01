@@ -9,18 +9,15 @@ export function parseSnapshotEntryToStateEntry<V>(
 ): OOStructStateEntry<V> | false {
   if (
     prototype(snapshotEntry) !== 'record' ||
-    !Object.hasOwn(snapshotEntry, '__value')
+    !Object.hasOwn(snapshotEntry, '__value') ||
+    !isUuidV7(snapshotEntry.__uuidv7) ||
+    !isUuidV7(snapshotEntry.__after) ||
+    !Array.isArray(snapshotEntry.__overwrites)
   )
     return false
 
   const [cloned, copiedValue] = safeStructuredClone(snapshotEntry.__value)
-  if (
-    !cloned ||
-    !isUuidV7(snapshotEntry.__uuidv7) ||
-    !isUuidV7(snapshotEntry.__after) ||
-    !Array.isArray(snapshotEntry.__overwrites) ||
-    prototype(copiedValue) !== prototype(defaultValue)
-  )
+  if (!cloned || prototype(copiedValue) !== prototype(defaultValue))
     return false
 
   const overwrites = new Set<string>([])

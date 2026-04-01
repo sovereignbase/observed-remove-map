@@ -89,7 +89,7 @@ export class OOStruct<T extends Record<string, unknown>> {
     const delta: OOStructDelta<T> = {}
     const change: OOStructChange<T> = {}
     delta[key] = this.overwriteAndReturnSnapshotEntry(key, copiedValue)
-    change[key] = value
+    change[key] = structuredClone(copiedValue)
     this.__eventTarget.dispatchEvent(
       new CustomEvent('delta', { detail: delta })
     )
@@ -106,14 +106,14 @@ export class OOStruct<T extends Record<string, unknown>> {
       if (!Object.hasOwn(this.__defaults, key)) return
       const value = this.__defaults[key]
       delta[key] = this.overwriteAndReturnSnapshotEntry(key, value)
-      change[key] = value
+      change[key] = structuredClone(value)
     } else {
       for (const [key, value] of Object.entries(this.__defaults)) {
         delta[key as K] = this.overwriteAndReturnSnapshotEntry(
           key as K,
           value as T[K]
         )
-        change[key as K] = value as T[K]
+        change[key as K] = structuredClone(value as T[K])
       }
     }
     this.__eventTarget.dispatchEvent(
@@ -161,7 +161,7 @@ export class OOStruct<T extends Record<string, unknown>> {
           target.__after = canditate.__after
           target.__overwrites.add(canditate.__after)
           this.__live[key as K] = canditate.__value
-          change[key as K] = canditate.__value
+          change[key as K] = structuredClone(canditate.__value)
         } else {
           delta[key as K] = this.overwriteAndReturnSnapshotEntry(
             key as K,
@@ -182,7 +182,7 @@ export class OOStruct<T extends Record<string, unknown>> {
         target.__overwrites.add(canditate.__after)
         target.__overwrites.add(current.__uuidv7)
         this.__live[key as K] = canditate.__value
-        change[key as K] = canditate.__value
+        change[key as K] = structuredClone(canditate.__value)
         continue
       }
 
