@@ -301,8 +301,8 @@
         state-based CRDT for fixed-key object structs. Each field maintains one
         visible value together with authoritative knowledge of overwritten
         UUIDv7 identifiers. The specification defines the data model, merge
-        rules, snapshot and delta formats, overwrite-set handling, and one
-        conforming JavaScript binding.
+        rules, snapshot and delta formats, acknowledgement frontiers,
+        overwrite-set compaction, and one conforming JavaScript binding.
       </p>
     </section>
 
@@ -409,9 +409,14 @@
         replica wishes to upstream.
       </p>
       <p>
-        A <dfn>well-formed snapshot</dfn> is a value that is an object whose
-        known keys each map to a valid field state entry for the corresponding
+        A <dfn>well-formed snapshot entry</dfn> is a serialized field value that
+        parses as a valid field state entry for the corresponding
         <a>default struct</a> field.
+      </p>
+      <p>
+        A snapshot input MAY contain malformed or unknown members. The reference
+        binding processes known keys individually and ignores entries that do
+        not parse.
       </p>
     </section>
 
@@ -488,10 +493,11 @@
             <a>default struct</a> and an optional <a>snapshot</a>.
           </p>
           <p>
-            If a <a>well-formed snapshot</a> is supplied, the replica adopts
-            each well-formed known field state entry from it. Otherwise the
-            replica initializes that field from the default struct and mints
-            fresh UUIDv7 state for it.
+            If a snapshot record is supplied, the replica attempts to adopt each
+            known field whose incoming value is a
+            <a>well-formed snapshot entry</a>. Unknown or malformed entries are
+            ignored. Any field not adopted from the snapshot is initialized from
+            the default struct with fresh UUIDv7 state.
           </p>
         </section>
 
@@ -698,9 +704,9 @@ interface OOStruct {
   undefined acknowledge();
   undefined garbageCollect(sequence&lt;object&gt; frontiers);
   undefined snapshot();
-  object keys();
-  object values();
-  object entries();
+  sequence&lt;DOMString&gt; keys();
+  sequence&lt;any&gt; values();
+  sequence&lt;any&gt; entries();
   undefined addEventListener(DOMString type, any listener, optional any options);
   undefined removeEventListener(DOMString type, any listener, optional any options);
 };
@@ -724,6 +730,10 @@ dictionary OOStructSnapshotEntry {
           <code>__overwrites</code>. The Web IDL above uses IDL-safe member
           names because dictionary members cannot use the double-underscore
           form.
+        </p>
+        <p>
+          The Web IDL above is a coarse binding summary. The precise key- and
+          value-level behavior is defined by the prose and algorithms below.
         </p>
       </section>
 
@@ -785,9 +795,8 @@ dictionary OOStructSnapshotEntry {
           </dd>
           <dt><dfn>ack event</dfn></dt>
           <dd>
-            A <code>CustomEvent</code> whose <code>detail</code> is the known
-            keys and to their current acknowledgement frontier values produced
-            when
+            A <code>CustomEvent</code> whose <code>detail</code> maps known keys
+            to their current acknowledgement frontier values produced when
             <a data-link-for="OOStruct">acknowledge()</a>
             is invoked.
           </dd>
