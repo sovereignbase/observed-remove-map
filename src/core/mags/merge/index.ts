@@ -2,7 +2,6 @@ import type {
   CRStructState,
   CRStructDelta,
   CRStructChange,
-  CRStructSnapshotEntry,
   CRStructStateEntry,
 } from '../../../.types/index.js'
 import {
@@ -16,7 +15,7 @@ import {
  *
  * @param replica - The incoming partial snapshot projection to merge.
  */
-export function merge<T extends Record<string, unknown>>(
+export function __merge<T extends Record<string, unknown>>(
   crStructDelta: CRStructDelta<T>,
   crStructReplica: CRStructState<T>
 ): { change: CRStructChange<T>; delta: CRStructDelta<T> } | false {

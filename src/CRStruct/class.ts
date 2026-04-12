@@ -156,7 +156,7 @@ export class CRStruct<T extends Record<string, unknown>> {
    * @param frontiers - A collection of acknowledgement frontiers to compact against.
    */
   garbageCollect(frontiers: Array<CRStructAck<T>>): void {
-    void __garbageCollect(frontiers, this.state)
+    void __garbageCollect<T>(frontiers, this.state)
   }
 
   /**
