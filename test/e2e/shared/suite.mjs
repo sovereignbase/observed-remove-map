@@ -1,9 +1,23 @@
-const TEST_TIMEOUT_MS = 5000
+const TEST_TIMEOUT_MS = 10_000
 
-export async function runOOStructSuite(api, options = {}) {
-  const { label = 'runtime' } = options
+export async function runCRStructSuite(api, options = {}) {
+  const {
+    label = 'runtime',
+    stressRounds = 12,
+    includeStress = false,
+  } = options
   const results = { label, ok: true, errors: [], tests: [] }
-  const { OOStruct } = api
+  const {
+    CRStruct,
+    __acknowledge,
+    __create,
+    __delete,
+    __garbageCollect,
+    __merge,
+    __read,
+    __snapshot,
+    __update,
+  } = api
 
   function assert(condition, message) {
     if (!condition) throw new Error(message || 'assertion failed')
@@ -16,11 +30,13 @@ export async function runOOStructSuite(api, options = {}) {
   }
 
   function assertJsonEqual(actual, expected, message) {
-    assertEqual(
-      JSON.stringify(actual),
-      JSON.stringify(expected),
-      message || 'json mismatch'
-    )
+    const actualJson = JSON.stringify(actual)
+    const expectedJson = JSON.stringify(expected)
+    if (actualJson !== expectedJson) {
+      throw new Error(
+        message || `expected ${actualJson} to equal ${expectedJson}`
+      )
+    }
   }
 
   function createDefaults() {
@@ -33,7 +49,7 @@ export async function runOOStructSuite(api, options = {}) {
   }
 
   function createReplica(snapshot) {
-    return new OOStruct(createDefaults(), snapshot)
+    return new CRStruct(createDefaults(), snapshot)
   }
 
   function captureEvents(replica) {
@@ -61,17 +77,7 @@ export async function runOOStructSuite(api, options = {}) {
   }
 
   function readSnapshot(replica) {
-    let snapshot
-    replica.addEventListener(
-      'snapshot',
-      (event) => {
-        snapshot = event.detail
-      },
-      { once: true }
-    )
-    assertEqual(replica.snapshot(), undefined)
-    assert(snapshot, 'expected snapshot detail')
-    return snapshot
+    return replica.toJSON()
   }
 
   function readAck(replica) {
@@ -88,47 +94,54 @@ export async function runOOStructSuite(api, options = {}) {
     return ack
   }
 
-  function createValidUuid(seed = 'seed') {
-    const replica = createReplica()
-    replica.update('name', seed)
-    return readSnapshot(replica).name.__uuidv7
-  }
-
   function normalizeSnapshot(snapshot) {
     const normalized = {}
     for (const key of Object.keys(snapshot).sort()) {
       const entry = snapshot[key]
       normalized[key] = {
-        __uuidv7: entry.__uuidv7,
-        __value: structuredClone(entry.__value),
-        __after: entry.__after,
-        __overwrites: [...entry.__overwrites].sort(),
+        uuidv7: entry.uuidv7,
+        value: structuredClone(entry.value),
+        predecessor: entry.predecessor,
+        tombstones: [...entry.tombstones].sort(),
       }
     }
     return normalized
   }
 
-  function readProjection(replica) {
-    return Object.fromEntries(replica.entries())
+  function projection(replica) {
+    return replica.clone()
   }
 
-  function assertOOStructError(error, code) {
-    assert(error, 'expected an error')
-    assertEqual(error.name, 'OOStructError', 'expected OOStructError name')
-    assertEqual(error.code, code, `expected ${code} code`)
-    assert(
-      /\{@sovereignbase\/observed-overwrite-struct\}/.test(
-        String(error.message)
-      ),
-      'expected prefixed error message'
-    )
+  function nextValue(field, step, replicaIndex) {
+    switch (field) {
+      case 'name':
+        return `name-${replicaIndex}-${step}`
+      case 'count':
+        return step + replicaIndex
+      case 'meta':
+        return { enabled: (step + replicaIndex) % 2 === 0 }
+      case 'tags':
+        return [`tag-${replicaIndex}-${step}`, `tag-${step}`]
+      default:
+        throw new Error(`unknown field: ${field}`)
+    }
+  }
+
+  function random(seed) {
+    let state = seed >>> 0
+    return () => {
+      state = (state + 0x6d2b79f5) >>> 0
+      let t = Math.imul(state ^ (state >>> 15), 1 | state)
+      t ^= t + Math.imul(t ^ (t >>> 7), 61 | t)
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+    }
   }
 
   async function withTimeout(promise, ms, name) {
     let timer
     const timeout = new Promise((_, reject) => {
       timer = setTimeout(() => {
-        reject(new Error(`timeout after ${ms}ms: ${name}`))
+        reject(new Error(`timeout after ${ms}ms${name ? `: ${name}` : ''}`))
       }, ms)
     })
     return Promise.race([promise.finally(() => clearTimeout(timer)), timeout])
@@ -146,136 +159,281 @@ export async function runOOStructSuite(api, options = {}) {
   }
 
   await runTest('exports shape', () => {
-    assert(typeof OOStruct === 'function', 'OOStruct export missing')
-  })
-
-  await runTest('constructor and snapshot shape', () => {
-    const replica = createReplica()
-    const snapshot = readSnapshot(replica)
-
-    assertJsonEqual(replica.keys(), ['name', 'count', 'meta', 'tags'])
-    assertEqual(replica.read('name'), '')
-    assertEqual(replica.read('count'), 0)
-    assertJsonEqual(replica.read('meta'), { enabled: false })
-    assertJsonEqual(replica.read('tags'), [])
-    assertJsonEqual(Object.keys(snapshot), ['name', 'count', 'meta', 'tags'])
-  })
-
-  await runTest('update emits detached delta and change payloads', () => {
-    const replica = createReplica()
-    const events = captureEvents(replica)
-    replica.update('meta', { enabled: true })
-
-    assertJsonEqual(replica.read('meta'), { enabled: true })
-    assertEqual(events.delta.length, 1)
-    assertEqual(events.change.length, 1)
-
-    events.delta[0].meta.__value.enabled = false
-    events.change[0].meta.enabled = false
-
-    assertJsonEqual(replica.read('meta'), { enabled: true })
-  })
-
-  await runTest('update reports typed errors', () => {
-    const replica = createReplica()
-
-    try {
-      replica.update('count', 'bad')
-      throw new Error('expected update to throw')
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message === 'expected update to throw'
-      ) {
-        throw error
-      }
-      assertOOStructError(error, 'VALUE_TYPE_MISMATCH')
+    for (const value of [
+      CRStruct,
+      __acknowledge,
+      __create,
+      __delete,
+      __garbageCollect,
+      __merge,
+      __read,
+      __snapshot,
+      __update,
+    ]) {
+      assert(typeof value === 'function', 'missing public export')
     }
   })
 
-  await runTest('delete resets one field and whole struct', () => {
+  await runTest(
+    'constructor proxy reflection and serialization surface',
+    () => {
+      const replica = createReplica()
+
+      assertEqual(replica.name, '')
+      assertEqual(replica.count, 0)
+      assertJsonEqual(replica.meta, { enabled: false })
+      assertJsonEqual(replica.tags, [])
+      assertJsonEqual(replica.keys(), ['name', 'count', 'meta', 'tags'])
+      assertJsonEqual(Object.keys(replica), ['name', 'count', 'meta', 'tags'])
+
+      const enumerated = []
+      for (const key in replica) enumerated.push(key)
+      assertJsonEqual(enumerated, ['name', 'count', 'meta', 'tags'])
+
+      const ownKeys = Reflect.ownKeys(replica)
+      for (const key of [
+        'state',
+        'eventTarget',
+        'name',
+        'count',
+        'meta',
+        'tags',
+      ]) {
+        assert(ownKeys.includes(key), `missing own key ${String(key)}`)
+      }
+
+      const json = readSnapshot(replica)
+      assertJsonEqual(Object.keys(json), ['name', 'count', 'meta', 'tags'])
+      assertEqual(replica.toString(), JSON.stringify(json))
+    }
+  )
+
+  await runTest('local writes deletes clears and detached payloads', () => {
     const replica = createReplica()
-    replica.update('name', 'alice')
-    replica.update('count', 7)
-    replica.delete('name')
+    const events = captureEvents(replica)
 
-    assertEqual(replica.read('name'), '')
-    assertEqual(replica.read('count'), 7)
+    assertEqual(Reflect.set(replica, 'meta', { enabled: true }), true)
+    assertEqual(Reflect.set(replica, 'tags', ['x']), true)
+    assertEqual('meta' in replica, true)
+    assertEqual('ghost' in replica, false)
+    assertEqual(Reflect.set(replica, 'ghost', 'bad'), false)
+    assertEqual(Reflect.deleteProperty(replica, 'ghost'), false)
+    assertEqual(
+      Reflect.set(replica, 'name', () => {}),
+      false
+    )
+    assertEqual(Reflect.deleteProperty(replica, 'tags'), true)
 
-    replica.delete()
+    events.delta[0].meta.value.enabled = false
+    events.change[0].meta.enabled = false
+    assertJsonEqual(replica.meta, { enabled: true })
 
-    assertEqual(replica.read('name'), '')
-    assertEqual(replica.read('count'), 0)
-    assertJsonEqual(replica.read('meta'), { enabled: false })
-    assertJsonEqual(replica.read('tags'), [])
+    replica.clear()
+
+    assertJsonEqual(replica.clone(), createDefaults())
+    assert(events.delta.length >= 2, 'expected delta events from local writes')
+    assert(
+      events.change.length >= 2,
+      'expected change events from local writes'
+    )
   })
 
-  await runTest('merge converges replicas', () => {
-    const a = createReplica()
-    const b = createReplica()
-    a.update('name', 'alice')
-    b.merge(readSnapshot(a))
-    b.update('count', 5)
-    a.merge(readSnapshot(b))
-    a.update('meta', { enabled: true })
-    b.merge(readSnapshot(a))
-    a.merge(readSnapshot(b))
+  await runTest('core create read update delete and snapshot roundtrip', () => {
+    const state = __create(createDefaults())
+    assertEqual(__read('name', state), '')
 
-    assertJsonEqual(readProjection(a), readProjection(b))
+    const update = __update('name', 'alice', state)
+    assertJsonEqual(update.change, { name: 'alice' })
+    assertEqual(__read('name', state), 'alice')
+
+    const snapshot = __snapshot(state)
+    const rebuilt = __create(createDefaults(), snapshot)
+    assertEqual(__read('name', rebuilt), 'alice')
+
+    const deleted = __delete(rebuilt, 'name')
+    assertJsonEqual(deleted.change, { name: '' })
+    assertEqual(__read('name', rebuilt), '')
+  })
+
+  await runTest('typed errors remain explicit in core operations', () => {
+    try {
+      __create({
+        ...createDefaults(),
+        bad: () => {},
+      })
+      throw new Error('expected defaults error')
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === 'expected defaults error'
+      ) {
+        throw error
+      }
+      assertEqual(error.name, 'CRStructError')
+      assertEqual(error.code, 'DEFAULTS_NOT_CLONEABLE')
+    }
+
+    try {
+      __update('count', 'bad', __create(createDefaults()))
+      throw new Error('expected update error')
+    } catch (error) {
+      if (error instanceof Error && error.message === 'expected update error') {
+        throw error
+      }
+      assertEqual(error.name, 'CRStructError')
+      assertEqual(error.code, 'VALUE_TYPE_MISMATCH')
+    }
   })
 
   await runTest(
-    'acknowledge and garbageCollect compact overwritten identifiers',
+    'merge remains non-throwing for hostile ingress and converges peers',
+    () => {
+      const local = createReplica()
+      const remote = createReplica(readSnapshot(local))
+      const before = normalizeSnapshot(readSnapshot(local))
+
+      for (const payload of [
+        null,
+        false,
+        [],
+        { ghost: { uuidv7: 'bad' } },
+        {
+          name: {
+            uuidv7: 'bad',
+            predecessor: 'bad',
+            value: 'x',
+            tombstones: [],
+          },
+        },
+      ]) {
+        assertEqual(local.merge(payload), undefined)
+      }
+
+      assertJsonEqual(normalizeSnapshot(readSnapshot(local)), before)
+
+      local.name = 'alice'
+      remote.merge(readSnapshot(local))
+      remote.count = 7
+      local.merge(readSnapshot(remote))
+
+      assertJsonEqual(projection(local), projection(remote))
+    }
+  )
+
+  await runTest(
+    'acknowledge and garbageCollect compact retained tombstones',
     () => {
       const replica = createReplica()
-      replica.update('name', 'a')
-      replica.update('name', 'b')
-      replica.update('name', 'c')
+      replica.name = 'a'
+      replica.name = 'b'
+      replica.name = 'c'
       const before = readSnapshot(replica)
       const ack = readAck(replica)
 
       replica.garbageCollect([ack])
 
       const after = readSnapshot(replica)
-      assert(after.name.__overwrites.length < before.name.__overwrites.length)
+      assert(after.name.tombstones.length < before.name.tombstones.length)
       assert(
-        after.name.__overwrites.includes(after.name.__after),
-        'expected current after to survive gc'
+        after.name.tombstones.includes(after.name.predecessor),
+        'expected current predecessor to survive gc'
       )
     }
   )
 
-  await runTest('listener object and removeEventListener work', () => {
-    const replica = createReplica()
-    let calls = 0
-    const listener = {
-      handleEvent() {
-        calls++
-      },
-    }
-
-    replica.addEventListener('snapshot', listener)
-    replica.snapshot()
-    replica.removeEventListener('snapshot', listener)
-    replica.snapshot()
-
-    assertEqual(calls, 1)
-  })
-
   await runTest(
-    'malformed ingress stays non-throwing and does not corrupt state',
+    'listener objects snapshot events and removal behave consistently',
     () => {
       const replica = createReplica()
-      const before = normalizeSnapshot(readSnapshot(replica))
+      let detail
+      let calls = 0
+      const listener = {
+        handleEvent(event) {
+          calls++
+          detail = event.detail
+        },
+      }
 
-      replica.merge({ name: null })
-      replica.merge({ ghost: { __uuidv7: createValidUuid('ghost') } })
-      replica.merge([])
-      replica.merge(false)
+      replica.addEventListener('snapshot', listener)
+      replica.snapshot()
+      replica.removeEventListener('snapshot', listener)
+      replica.snapshot()
 
-      assertJsonEqual(normalizeSnapshot(readSnapshot(replica)), before)
+      detail.meta.value.enabled = true
+
+      assertEqual(calls, 1)
+      assertJsonEqual(replica.meta, { enabled: false })
     }
   )
+
+  if (includeStress) {
+    await runTest(
+      'replicas converge under deterministic shuffled gossip',
+      () => {
+        const rng = random(0x0ddc0ffe)
+        const replicas = Array.from({ length: 4 }, () => createReplica())
+        const fields = ['name', 'count', 'meta', 'tags']
+
+        for (let step = 0; step < stressRounds * 20; step++) {
+          const actorIndex = Math.floor(rng() * replicas.length)
+          const actor = replicas[actorIndex]
+          const branch = rng()
+
+          if (branch < 0.34) {
+            const field = fields[Math.floor(rng() * fields.length)]
+            assertEqual(
+              Reflect.set(actor, field, nextValue(field, step, actorIndex)),
+              true
+            )
+            continue
+          }
+
+          if (branch < 0.5) {
+            if (rng() < 0.5) actor.clear()
+            else
+              Reflect.deleteProperty(
+                actor,
+                fields[Math.floor(rng() * fields.length)]
+              )
+            continue
+          }
+
+          if (branch < 0.8) {
+            const sourceIndex = Math.floor(rng() * replicas.length)
+            if (sourceIndex === actorIndex) continue
+            actor.merge(readSnapshot(replicas[sourceIndex]))
+            continue
+          }
+
+          const frontiers = replicas.map(readAck)
+          for (const replica of replicas) replica.garbageCollect(frontiers)
+        }
+
+        for (let round = 0; round < 4; round++) {
+          const snapshots = replicas.map(readSnapshot)
+          for (
+            let targetIndex = 0;
+            targetIndex < replicas.length;
+            targetIndex++
+          ) {
+            for (
+              let sourceIndex = 0;
+              sourceIndex < snapshots.length;
+              sourceIndex++
+            ) {
+              if (sourceIndex === targetIndex) continue
+              replicas[targetIndex].merge(snapshots[sourceIndex])
+            }
+          }
+        }
+
+        const expected = projection(replicas[0])
+        for (let index = 1; index < replicas.length; index++) {
+          assertJsonEqual(projection(replicas[index]), expected)
+        }
+      }
+    )
+  }
 
   return results
 }

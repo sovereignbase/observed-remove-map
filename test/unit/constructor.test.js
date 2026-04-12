@@ -1,84 +1,97 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { OOStruct } from '../../dist/index.js'
+import { CRStruct } from '../../dist/index.js'
 import {
   assertSnapshotShape,
   cloneSnapshot,
-  createDefaults,
   createReplica,
   readSnapshot,
 } from '../shared/oostruct.mjs'
 
-test('constructor starts from defaults and exposes a valid snapshot shape', () => {
+test('constructor starts from defaults and exposes proxy-backed field reflection', () => {
   const replica = createReplica()
 
+  assert.equal(replica instanceof CRStruct, true)
+  assert.equal(replica.constructor, CRStruct)
   assert.deepEqual(replica.keys(), ['name', 'count', 'meta', 'tags'])
-  assert.equal(replica.read('name'), '')
-  assert.equal(replica.read('count'), 0)
-  assert.deepEqual(replica.read('meta'), { enabled: false })
-  assert.deepEqual(replica.read('tags'), [])
+  assert.equal(replica.name, '')
+  assert.equal(replica.count, 0)
+  assert.deepEqual(replica.meta, { enabled: false })
+  assert.deepEqual(replica.tags, [])
+  assert.deepEqual(Object.keys(replica), ['name', 'count', 'meta', 'tags'])
+
+  const enumerated = []
+  for (const key in replica) enumerated.push(key)
+  assert.deepEqual(enumerated, ['name', 'count', 'meta', 'tags'])
+
+  const ownKeys = Reflect.ownKeys(replica)
+  for (const key of ['state', 'eventTarget', 'name', 'count', 'meta', 'tags']) {
+    assert.equal(ownKeys.includes(key), true)
+  }
+  assert.equal(new Set(ownKeys).size, ownKeys.length)
+
+  const stateDescriptor = Object.getOwnPropertyDescriptor(replica, 'state')
+  assert.equal(stateDescriptor.enumerable, false)
+  const nameDescriptor = Object.getOwnPropertyDescriptor(replica, 'name')
+  assert.equal(nameDescriptor.enumerable, true)
+  assert.equal(nameDescriptor.writable, true)
+  assert.equal(nameDescriptor.configurable, true)
+  assert.equal(nameDescriptor.value, '')
 
   assertSnapshotShape(readSnapshot(replica))
 })
 
 test('constructor hydrates a valid snapshot and ignores unknown keys', () => {
   const source = createReplica()
-  source.update('name', 'alice')
-  source.update('count', 7)
-  source.update('meta', { enabled: true })
-  source.update('tags', ['a', 'b'])
+  source.name = 'alice'
+  source.count = 7
+  source.meta = { enabled: true }
+  source.tags = ['a', 'b']
   const snapshot = cloneSnapshot(readSnapshot(source))
   snapshot.ghost = snapshot.name
 
   const target = createReplica(snapshot)
 
-  assert.equal(target.read('name'), 'alice')
-  assert.equal(target.read('count'), 7)
-  assert.deepEqual(target.read('meta'), { enabled: true })
-  assert.deepEqual(target.read('tags'), ['a', 'b'])
-  assert.equal(target.keys().includes('ghost'), false)
+  assert.equal(target.name, 'alice')
+  assert.equal(target.count, 7)
+  assert.deepEqual(target.meta, { enabled: true })
+  assert.deepEqual(target.tags, ['a', 'b'])
+  assert.equal(Object.keys(target).includes('ghost'), false)
 })
 
 test('constructor falls back to defaults for invalid field entries only', () => {
   const source = createReplica()
-  source.update('count', 3)
-  source.update('meta', { enabled: true })
+  source.count = 3
+  source.meta = { enabled: true }
   const snapshot = cloneSnapshot(readSnapshot(source))
   snapshot.name = {
-    __uuidv7: 'bad',
-    __after: 'bad',
-    __value: 'broken',
-    __overwrites: [],
+    uuidv7: 'bad',
+    predecessor: 'bad',
+    value: 'broken',
+    tombstones: [],
   }
 
   const target = createReplica(snapshot)
 
-  assert.equal(target.read('name'), '')
-  assert.equal(target.read('count'), 3)
-  assert.deepEqual(target.read('meta'), { enabled: true })
-  assert.deepEqual(target.read('tags'), [])
+  assert.equal(target.name, '')
+  assert.equal(target.count, 3)
+  assert.deepEqual(target.meta, { enabled: true })
+  assert.deepEqual(target.tags, [])
 })
 
-test('constructor filters invalid and self overwrites from accepted entries', () => {
+test('constructor filters invalid and self tombstones from accepted entries', () => {
   const source = createReplica()
-  source.update('name', 'alice')
+  source.name = 'alice'
   const snapshot = cloneSnapshot(readSnapshot(source))
-  snapshot.name.__overwrites = [
+  snapshot.name.tombstones = [
     'bad',
-    snapshot.name.__uuidv7,
-    snapshot.name.__after,
+    snapshot.name.uuidv7,
+    snapshot.name.predecessor,
   ]
 
   const target = createReplica(snapshot)
   const hydrated = readSnapshot(target)
 
-  assert.equal(target.read('name'), 'alice')
-  assert.deepEqual(hydrated.name.__overwrites, [snapshot.name.__after])
-})
-
-test('create factory returns a working replica instance', () => {
-  const replica = OOStruct.create(createDefaults())
-
-  assert.equal(replica instanceof OOStruct, true)
-  assert.deepEqual(replica.keys(), ['name', 'count', 'meta', 'tags'])
+  assert.equal(target.name, 'alice')
+  assert.deepEqual(hydrated.name.tombstones, [snapshot.name.predecessor])
 })

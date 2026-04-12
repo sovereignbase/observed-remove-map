@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
 
-test('observed-overwrite-struct browser suite', async ({ page }) => {
+test('convergent-replicated-struct browser suite', async ({ page }) => {
   await page.goto('/')
-  await page.waitForFunction(() => window.__OOSTRUCT_RESULTS__)
-  const results = await page.evaluate(() => window.__OOSTRUCT_RESULTS__)
+  await page.waitForFunction(() => window.__CRSTRUCT_RESULTS__)
+  const results = await page.evaluate(() => window.__CRSTRUCT_RESULTS__)
 
   expect(
     results.ok,

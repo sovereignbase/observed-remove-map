@@ -10,9 +10,9 @@ import {
 
 test('acknowledge emits valid frontier identifiers for every field', () => {
   const replica = createReplica()
-  replica.update('name', 'alice')
-  replica.update('count', 1)
-  replica.update('meta', { enabled: true })
+  replica.name = 'alice'
+  replica.count = 1
+  replica.meta = { enabled: true }
   const ack = readAck(replica)
 
   assert.deepEqual(Object.keys(ack).sort(), ['count', 'meta', 'name', 'tags'])
@@ -21,11 +21,11 @@ test('acknowledge emits valid frontier identifiers for every field', () => {
   }
 })
 
-test('garbageCollect removes acknowledged overwrites but preserves current after', () => {
+test('garbageCollect removes acknowledged tombstones but preserves current predecessor', () => {
   const replica = createReplica()
-  replica.update('name', 'a')
-  replica.update('name', 'b')
-  replica.update('name', 'c')
+  replica.name = 'a'
+  replica.name = 'b'
+  replica.name = 'c'
   const before = readSnapshot(replica)
   const ack = readAck(replica)
 
@@ -33,18 +33,19 @@ test('garbageCollect removes acknowledged overwrites but preserves current after
 
   const after = readSnapshot(replica)
 
-  assert.equal(after.name.__overwrites.includes(after.name.__after), true)
-  assert(after.name.__overwrites.length < before.name.__overwrites.length)
-  assert.deepEqual(after.name.__overwrites, [after.name.__after])
+  assert.equal(after.name.tombstones.includes(after.name.predecessor), true)
+  assert(after.name.tombstones.length < before.name.tombstones.length)
+  assert.deepEqual(after.name.tombstones, [after.name.predecessor])
 })
 
-test('garbageCollect ignores non-array and empty frontier inputs', () => {
+test('garbageCollect ignores non-array empty and invalid frontier inputs', () => {
   const replica = createReplica()
-  replica.update('name', 'alice')
+  replica.name = 'alice'
   const before = readSnapshot(replica)
 
   replica.garbageCollect(false)
   replica.garbageCollect([])
+  replica.garbageCollect([{ name: 'bad' }])
 
   assert.deepEqual(readSnapshot(replica), before)
 })

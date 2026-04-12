@@ -13,40 +13,45 @@ test('merge ignores malformed ingress and hostile per-key payloads without throw
   const replica = createReplica()
   const before = normalizeSnapshot(readSnapshot(replica))
   const validUuid = createValidUuid('valid')
-  const validAfter = createValidUuid('after')
+  const validPredecessor = createValidUuid('predecessor')
   const corpus = [
     null,
     false,
     0,
     'bad',
     [],
-    { ghost: { __uuidv7: validUuid } },
+    { ghost: { uuidv7: validUuid } },
     { name: null },
     {
-      name: { __uuidv7: 'bad', __after: 'bad', __value: 'x', __overwrites: [] },
-    },
-    {
       name: {
-        __uuidv7: validUuid,
-        __after: validAfter,
-        __value: 123,
-        __overwrites: [validAfter],
+        uuidv7: 'bad',
+        predecessor: 'bad',
+        value: 'x',
+        tombstones: [],
       },
     },
     {
       name: {
-        __uuidv7: validUuid,
-        __after: validAfter,
-        __value: 'ok',
-        __overwrites: 'bad',
+        uuidv7: validUuid,
+        predecessor: validPredecessor,
+        value: 123,
+        tombstones: [validPredecessor],
       },
     },
     {
       name: {
-        __uuidv7: validUuid,
-        __after: validAfter,
-        __value: () => {},
-        __overwrites: [validAfter],
+        uuidv7: validUuid,
+        predecessor: validPredecessor,
+        value: 'ok',
+        tombstones: 'bad',
+      },
+    },
+    {
+      name: {
+        uuidv7: validUuid,
+        predecessor: validPredecessor,
+        value: () => {},
+        tombstones: [validPredecessor],
       },
     },
   ]
@@ -65,29 +70,31 @@ test('merge adopts a direct successor and emits change', () => {
   const baseSnapshot = readSnapshot(source)
   const target = createReplica(baseSnapshot)
   const sourceEvents = captureEvents(source)
-  source.update('name', 'alice')
+  source.name = 'alice'
   const delta = sourceEvents.events.delta[0]
 
   const targetEvents = captureEvents(target)
   target.merge(delta)
 
-  assert.equal(target.read('name'), 'alice')
-  assert.equal(targetEvents.events.delta.length, 0)
+  assert.equal(target.name, 'alice')
+  assert.equal(targetEvents.events.delta.length, 1)
   assert.equal(targetEvents.events.change.length, 1)
+  assert.deepEqual(targetEvents.events.delta[0], {})
+  assert.deepEqual(targetEvents.events.change[0], { name: 'alice' })
 })
 
-test('merge ignores candidates whose after identifier is missing from overwrites', () => {
+test('merge ignores candidates whose predecessor is missing from tombstones', () => {
   const replica = createReplica()
   const candidateUuid = createValidUuid('candidate')
-  const after = createValidUuid('after')
+  const predecessor = createValidUuid('predecessor')
   const before = normalizeSnapshot(readSnapshot(replica))
 
   replica.merge({
     name: {
-      __uuidv7: candidateUuid,
-      __after: after,
-      __value: 'ignored',
-      __overwrites: [],
+      uuidv7: candidateUuid,
+      predecessor,
+      value: 'ignored',
+      tombstones: [],
     },
   })
 
@@ -100,16 +107,17 @@ test('merge keeps the current winner and emits a rebuttal delta for stale concur
   const older = createReplica(baseSnapshot)
   const newer = createReplica(baseSnapshot)
 
-  older.update('name', 'older')
+  older.name = 'older'
   const olderSnapshot = readSnapshot(older)
-  newer.update('name', 'newer')
+  newer.name = 'newer'
 
   const newerEvents = captureEvents(newer)
   newer.merge(olderSnapshot)
 
-  assert.equal(newer.read('name'), 'newer')
-  assert.equal(newerEvents.events.change.length, 0)
+  assert.equal(newer.name, 'newer')
   assert.equal(newerEvents.events.delta.length, 1)
+  assert.equal(newerEvents.events.change.length, 1)
+  assert.deepEqual(newerEvents.events.change[0], {})
 
   older.merge(newerEvents.events.delta[0])
 
@@ -119,34 +127,37 @@ test('merge keeps the current winner and emits a rebuttal delta for stale concur
   )
 })
 
-test('merge adopts a same-uuid candidate with a greater after identifier', () => {
+test('merge adopts a same-uuid candidate with a greater predecessor identifier', () => {
   const replica = createReplica()
-  replica.update('name', 'local')
+  replica.name = 'local'
   const snapshot = cloneSnapshot(readSnapshot(replica))
-  const greaterAfter = createValidUuid('greater-after')
+  const greaterPredecessor = createValidUuid('greater-predecessor')
 
-  snapshot.name.__value = 'remote'
-  snapshot.name.__after = greaterAfter
-  snapshot.name.__overwrites.push(greaterAfter)
+  snapshot.name.value = 'remote'
+  snapshot.name.predecessor = greaterPredecessor
+  snapshot.name.tombstones.push(greaterPredecessor)
 
   const { events } = captureEvents(replica)
   replica.merge({ name: snapshot.name })
 
-  assert.equal(replica.read('name'), 'remote')
-  assert.equal(events.delta.length, 0)
+  assert.equal(replica.name, 'remote')
+  assert.equal(events.delta.length, 1)
   assert.equal(events.change.length, 1)
+  assert.deepEqual(events.delta[0], {})
+  assert.deepEqual(events.change[0], { name: 'remote' })
 })
 
-test('merge repairs a same-uuid conflict with a stale after identifier', () => {
+test('merge repairs a same-uuid conflict with a stale predecessor identifier', () => {
   const replica = createReplica()
-  replica.update('name', 'local')
+  replica.name = 'local'
   const snapshot = cloneSnapshot(readSnapshot(replica))
-  snapshot.name.__value = 'conflict'
+  snapshot.name.value = 'conflict'
 
   const { events } = captureEvents(replica)
   replica.merge({ name: snapshot.name })
 
-  assert.equal(replica.read('name'), 'local')
-  assert.equal(events.change.length, 0)
+  assert.equal(replica.name, 'local')
   assert.equal(events.delta.length, 1)
+  assert.equal(events.change.length, 1)
+  assert.deepEqual(events.change[0], {})
 })

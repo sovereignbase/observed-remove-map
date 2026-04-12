@@ -2,9 +2,9 @@ import * as api from '../../../dist/index.js'
 import {
   ensurePassing,
   printResults,
-  runOOStructSuite,
+  runCRStructSuite,
 } from '../shared/suite.mjs'
 
-const results = await runOOStructSuite(api, { label: 'deno esm' })
+const results = await runCRStructSuite(api, { label: 'deno esm' })
 printResults(results)
 ensurePassing(results)

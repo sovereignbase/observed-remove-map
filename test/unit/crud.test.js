@@ -1,12 +1,20 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { captureEvents, createReplica } from '../shared/oostruct.mjs'
+import {
+  assertSnapshotShape,
+  captureEvents,
+  createReplica,
+  readSnapshot,
+  readState,
+} from '../shared/oostruct.mjs'
 
-test('read values and entries return detached clones', () => {
+test('field reads clone values across direct access clone values entries descriptors and iteration', () => {
   const replica = createReplica()
 
-  const meta = replica.read('meta')
+  const meta = replica.meta
   meta.enabled = true
+  const tags = replica.tags
+  tags.push('property')
 
   const entries = Object.fromEntries(replica.entries())
   entries.meta.enabled = true
@@ -16,61 +24,71 @@ test('read values and entries return detached clones', () => {
   values[2].enabled = true
   values[3].push('value')
 
-  assert.deepEqual(replica.read('meta'), { enabled: false })
-  assert.deepEqual(replica.read('tags'), [])
+  const cloned = replica.clone()
+  cloned.meta.enabled = true
+  cloned.tags.push('clone')
+
+  const iterated = [...replica]
+  iterated[2][1].enabled = true
+  iterated[3][1].push('iterator')
+
+  const descriptor = Object.getOwnPropertyDescriptor(replica, 'meta')
+  descriptor.value.enabled = true
+
+  assert.deepEqual(replica.meta, { enabled: false })
+  assert.deepEqual(replica.tags, [])
 })
 
-test('update overwrites a field and emits detached delta and change payloads', () => {
+test('property writes emit detached delta and change payloads', () => {
   const replica = createReplica()
   const { events } = captureEvents(replica)
 
-  replica.update('meta', { enabled: true })
+  assert.equal(Reflect.set(replica, 'meta', { enabled: true }), true)
 
-  assert.deepEqual(replica.read('meta'), { enabled: true })
+  assert.deepEqual(replica.meta, { enabled: true })
   assert.equal(events.delta.length, 1)
   assert.equal(events.change.length, 1)
 
-  events.delta[0].meta.__value.enabled = false
+  events.delta[0].meta.value.enabled = false
   events.change[0].meta.enabled = false
 
-  assert.deepEqual(replica.read('meta'), { enabled: true })
+  assert.deepEqual(replica.meta, { enabled: true })
 })
 
-test('delete resets a single field to its default value', () => {
+test('delete resets a single field and clear resets the whole struct', () => {
   const replica = createReplica()
-  replica.update('name', 'alice')
-  replica.update('count', 3)
-  const { events } = captureEvents(replica)
+  replica.name = 'alice'
+  replica.count = 3
+  replica.meta = { enabled: true }
+  replica.tags = ['x']
 
-  replica.delete('name')
+  const deleteEvents = captureEvents(replica)
+  assert.equal(Reflect.deleteProperty(replica, 'name'), true)
+  assert.equal(replica.name, '')
+  assert.equal(replica.count, 3)
+  assert.deepEqual(Object.keys(deleteEvents.events.delta[0]), ['name'])
+  assert.deepEqual(Object.keys(deleteEvents.events.change[0]), ['name'])
 
-  assert.equal(replica.read('name'), '')
-  assert.equal(replica.read('count'), 3)
-  assert.deepEqual(Object.keys(events.delta[0]), ['name'])
-  assert.deepEqual(Object.keys(events.change[0]), ['name'])
-})
+  const clearReplica = createReplica()
+  clearReplica.name = 'alice'
+  clearReplica.count = 3
+  clearReplica.meta = { enabled: true }
+  clearReplica.tags = ['x']
+  const clearEvents = captureEvents(clearReplica)
 
-test('delete without a key resets every field to defaults', () => {
-  const replica = createReplica()
-  replica.update('name', 'alice')
-  replica.update('count', 3)
-  replica.update('meta', { enabled: true })
-  replica.update('tags', ['x'])
-  const { events } = captureEvents(replica)
+  clearReplica.clear()
 
-  replica.delete()
-
-  assert.equal(replica.read('name'), '')
-  assert.equal(replica.read('count'), 0)
-  assert.deepEqual(replica.read('meta'), { enabled: false })
-  assert.deepEqual(replica.read('tags'), [])
-  assert.deepEqual(Object.keys(events.delta[0]).sort(), [
+  assert.equal(clearReplica.name, '')
+  assert.equal(clearReplica.count, 0)
+  assert.deepEqual(clearReplica.meta, { enabled: false })
+  assert.deepEqual(clearReplica.tags, [])
+  assert.deepEqual(Object.keys(clearEvents.events.delta[0]).sort(), [
     'count',
     'meta',
     'name',
     'tags',
   ])
-  assert.deepEqual(Object.keys(events.change[0]).sort(), [
+  assert.deepEqual(Object.keys(clearEvents.events.change[0]).sort(), [
     'count',
     'meta',
     'name',
@@ -78,12 +96,31 @@ test('delete without a key resets every field to defaults', () => {
   ])
 })
 
-test('delete ignores unknown runtime keys', () => {
+test('proxy reflection json and defensive false branches stay coherent', () => {
   const replica = createReplica()
-  const { events } = captureEvents(replica)
 
-  replica.delete('ghost')
+  assert.equal('name' in replica, true)
+  assert.equal('clear' in replica, true)
+  assert.equal('ghost' in replica, false)
+  assert.equal(Reflect.get(replica, 'ghost'), undefined)
+  assert.equal(Reflect.set(replica, 'ghost', 'bad'), false)
+  assert.equal(Reflect.deleteProperty(replica, 'ghost'), false)
+  assert.equal(
+    Reflect.set(replica, 'name', () => {}),
+    false
+  )
+  assert.equal(replica.name, '')
 
-  assert.equal(events.delta.length, 0)
-  assert.equal(events.change.length, 0)
+  replica.name = 'alice'
+  const json = readSnapshot(replica)
+  assertSnapshotShape(json)
+  assert.equal(replica.toString(), JSON.stringify(json))
+  assert.deepEqual(replica[Symbol.for('nodejs.util.inspect.custom')](), json)
+  assert.deepEqual(replica[Symbol.for('Deno.customInspect')](), json)
+
+  const state = readState(replica)
+  delete state.defaults.name
+  assert.equal(Reflect.deleteProperty(replica, 'name'), false)
+  state.defaults = null
+  assert.equal(Reflect.set(replica, 'count', 1), false)
 })

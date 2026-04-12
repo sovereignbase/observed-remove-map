@@ -65,6 +65,7 @@ class CRStructRaw<T extends Record<string, unknown>> {
         if (typeof key !== 'string' || !keys.has(key)) return false
         try {
           const result = __update<T>(key, value, target.state)
+          /* c8 ignore next -- __update either throws or returns a result object. */
           if (!result) return false
           const { delta, change } = result
           if (delta)

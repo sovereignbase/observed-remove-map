@@ -1,13 +1,17 @@
 import assert from 'node:assert/strict'
-import test from 'node:test'
-import { resolve } from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { CRStruct } from '../../dist/index.js'
 import {
-  createReplica,
+  createDefaults,
+  createValidUuid,
   mulberry32,
   readAck,
   readSnapshot,
 } from '../shared/oostruct.mjs'
+
+setTimeout(() => {
+  console.error('integration stress watchdog timeout')
+  process.exit(124)
+}, 8_000).unref()
 
 function nextValue(field, step, replicaIndex) {
   switch (field) {
@@ -25,9 +29,11 @@ function nextValue(field, step, replicaIndex) {
 }
 
 function hostileDelta(step) {
-  return step % 4 === 0
+  const uuid = createValidUuid(`hostile-${step}`)
+  const predecessor = createValidUuid(`hostile-predecessor-${step}`)
+  return step % 5 === 0
     ? { name: null }
-    : step % 4 === 1
+    : step % 5 === 1
       ? {
           name: {
             uuidv7: 'bad',
@@ -36,29 +42,42 @@ function hostileDelta(step) {
             tombstones: [],
           },
         }
-      : step % 4 === 2
+      : step % 5 === 2
         ? {
             count: {
-              uuidv7: 'bad',
-              predecessor: 'bad',
-              value: 1,
-              tombstones: [],
+              uuidv7: uuid,
+              predecessor,
+              value: 'bad',
+              tombstones: [predecessor],
             },
           }
-        : { ghost: { uuidv7: 'bad' } }
+        : step % 5 === 3
+          ? {
+              tags: {
+                uuidv7: uuid,
+                predecessor,
+                value: () => {},
+                tombstones: [predecessor],
+              },
+            }
+          : { ghost: { uuidv7: uuid } }
 }
 
-test('three replicas converge after deterministic random operations hostile ingress and protocol gc', () => {
-  const rng = mulberry32(0x0ddc0ffe)
-  const replicas = [createReplica(), createReplica(), createReplica()]
+for (let scenario = 0; scenario < 64; scenario++) {
+  const rng = mulberry32(0x0ddc0ffe + scenario)
+  const base = new CRStruct(createDefaults())
+  const replicas = Array.from(
+    { length: 3 + (scenario % 3) },
+    () => new CRStruct(createDefaults(), readSnapshot(base))
+  )
   const fields = ['name', 'count', 'meta', 'tags']
 
-  for (let step = 0; step < 250; step++) {
+  for (let step = 0; step < 32 + (scenario % 16); step++) {
     const actorIndex = Math.floor(rng() * replicas.length)
-    const actor = replicas[actorIndex]
+    let actor = replicas[actorIndex]
     const branch = rng()
 
-    if (branch < 0.35) {
+    if (branch < 0.32) {
       const field = fields[Math.floor(rng() * fields.length)]
       assert.equal(
         Reflect.set(actor, field, nextValue(field, step, actorIndex)),
@@ -67,21 +86,21 @@ test('three replicas converge after deterministic random operations hostile ingr
       continue
     }
 
-    if (branch < 0.5) {
-      if (rng() < 0.5) actor.clear()
+    if (branch < 0.46) {
+      if (rng() < 0.45) actor.clear()
       else
         Reflect.deleteProperty(actor, fields[Math.floor(rng() * fields.length)])
       continue
     }
 
-    if (branch < 0.75) {
+    if (branch < 0.74) {
       const sourceIndex = Math.floor(rng() * replicas.length)
       if (sourceIndex === actorIndex) continue
       actor.merge(readSnapshot(replicas[sourceIndex]))
       continue
     }
 
-    if (branch < 0.9) {
+    if (branch < 0.88) {
       assert.doesNotThrow(() => {
         actor.merge(hostileDelta(step))
       })
@@ -89,8 +108,13 @@ test('three replicas converge after deterministic random operations hostile ingr
     }
 
     const frontiers = replicas.map(readAck)
-    for (const replica of replicas) {
-      replica.garbageCollect(frontiers)
+    for (let index = 0; index < replicas.length; index++) {
+      replicas[index].garbageCollect(frontiers)
+    }
+
+    if (rng() < 0.18) {
+      actor = new CRStruct(createDefaults(), readSnapshot(actor))
+      replicas[actorIndex] = actor
     }
   }
 
@@ -105,24 +129,11 @@ test('three replicas converge after deterministic random operations hostile ingr
   }
 
   const projections = replicas.map((replica) => replica.clone())
-
-  assert.deepEqual(projections[0], projections[1])
-  assert.deepEqual(projections[1], projections[2])
-})
-
-test('integration stress scenarios stay convergent under restarts and hostile gossip', () => {
-  const stressRunner = resolve(
-    process.cwd(),
-    'test',
-    'integration',
-    'convergence-stress-runner.mjs'
-  )
-  const result = spawnSync(process.execPath, [stressRunner], {
-    stdio: 'inherit',
-    timeout: 10_000,
-  })
-
-  if (result.error) throw result.error
-  if (result.status !== 0)
-    throw new Error(`convergence stress exited with ${result.status ?? 1}`)
-})
+  for (let index = 1; index < projections.length; index++) {
+    assert.deepEqual(projections[index], projections[0])
+    assert.deepEqual(
+      new CRStruct(createDefaults(), readSnapshot(replicas[index])).clone(),
+      projections[index]
+    )
+  }
+}

@@ -1,9 +1,9 @@
 import * as api from '/dist/index.js'
-import { printResults, runOOStructSuite } from '../shared/suite.mjs'
+import { printResults, runCRStructSuite } from '../shared/suite.mjs'
 
-const results = await runOOStructSuite(api, { label: 'browser esm' })
+const results = await runCRStructSuite(api, { label: 'browser esm' })
 printResults(results)
-window.__OOSTRUCT_RESULTS__ = results
+window.__CRSTRUCT_RESULTS__ = results
 
 const status = document.getElementById('status')
 if (status) {

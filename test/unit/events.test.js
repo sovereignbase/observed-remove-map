@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { OOStruct } from '../../dist/index.js'
 import {
-  createDefaults,
   createReplica,
+  emitSnapshot,
   readSnapshot,
 } from '../shared/oostruct.mjs'
 
@@ -17,9 +16,9 @@ test('event listener object handleEvent receives delta detail', () => {
     },
   })
 
-  replica.update('name', 'alice')
+  replica.name = 'alice'
 
-  assert.equal(detail.name.__value, 'alice')
+  assert.equal(detail.name.value, 'alice')
 })
 
 test('removeEventListener stops function and object listeners', () => {
@@ -39,16 +38,16 @@ test('removeEventListener stops function and object listeners', () => {
   replica.addEventListener('snapshot', objectListener)
   replica.removeEventListener('delta', fnListener)
   replica.removeEventListener('snapshot', objectListener)
-  replica.update('name', 'alice')
+  replica.name = 'alice'
   replica.snapshot()
 
   assert.equal(fnCalls, 0)
   assert.equal(objectCalls, 0)
 })
 
-test('event channels remain independent across update merge snapshot and acknowledge', () => {
+test('event channels remain independent across local writes merges snapshot acknowledge and clear', () => {
   const local = createReplica()
-  const remote = new OOStruct(createDefaults())
+  const remote = createReplica(readSnapshot(local))
   const counts = { delta: 0, change: 0, snapshot: 0, ack: 0 }
 
   local.addEventListener('delta', () => {
@@ -64,15 +63,16 @@ test('event channels remain independent across update merge snapshot and acknowl
     counts.ack++
   })
 
-  local.update('name', 'alice')
-  remote.update('name', 'bob')
+  local.name = 'alice'
+  remote.count = 7
   local.merge(readSnapshot(remote))
   local.snapshot()
   local.acknowledge()
+  local.clear()
 
   assert.deepEqual(counts, {
-    delta: 1,
-    change: 2,
+    delta: 3,
+    change: 3,
     snapshot: 1,
     ack: 1,
   })
@@ -80,12 +80,14 @@ test('event channels remain independent across update merge snapshot and acknowl
 
 test('snapshot payloads are detached from live state', () => {
   const replica = createReplica()
-  replica.update('meta', { enabled: true })
-  const snapshot = readSnapshot(replica)
+  replica.meta = { enabled: true }
+  const snapshot = emitSnapshot(replica)
 
-  snapshot.meta.__value.enabled = false
-  snapshot.tags.__value.push('mutated')
+  snapshot.meta.value.enabled = false
+  snapshot.tags.value.push('mutated')
+  snapshot.name.tombstones.length = 0
 
-  assert.deepEqual(replica.read('meta'), { enabled: true })
-  assert.deepEqual(replica.read('tags'), [])
+  assert.deepEqual(replica.meta, { enabled: true })
+  assert.deepEqual(replica.tags, [])
+  assert.equal(readSnapshot(replica).name.tombstones.length > 0, true)
 })

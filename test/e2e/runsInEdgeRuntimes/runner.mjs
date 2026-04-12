@@ -6,7 +6,7 @@ import { EdgeRuntime } from 'edge-runtime'
 import {
   ensurePassing,
   printResults,
-  runOOStructSuite,
+  runCRStructSuite,
 } from '../shared/suite.mjs'
 
 const root = process.cwd()
@@ -42,30 +42,30 @@ function replaceNamedImports(bundleCode, packageName, globalName) {
 
 function toExecutableEdgeEsm(bundleCode) {
   const withoutImports = replaceNamedImports(
-    replaceNamedImports(bundleCode, 'uuid', 'globalThis.__OOSTRUCT_UUID'),
+    replaceNamedImports(bundleCode, 'uuid', 'globalThis.__CRSTRUCT_UUID'),
     '@sovereignbase/utils',
-    'globalThis.__OOSTRUCT_UTILS'
+    'globalThis.__CRSTRUCT_UTILS'
   )
   const exportMatch = withoutImports.match(
-    /export\s*\{\s*OOStruct\s*\};\s*(\/\/# sourceMappingURL=.*)?\s*$/
+    /export\s*\{[\s\S]*?\};\s*(\/\/# sourceMappingURL=.*)?\s*$/
   )
   if (!exportMatch) {
     throw new Error(
-      'edge-runtime esm harness could not find observed-overwrite-struct exports'
+      'edge-runtime esm harness could not find convergent-replicated-struct exports'
     )
   }
 
   const sourceMapComment = exportMatch[1] ? `${exportMatch[1]}\n` : ''
   return (
     withoutImports.slice(0, exportMatch.index) +
-    'globalThis.__OOSTRUCT_EXPORTS__ = { OOStruct };\n' +
+    'globalThis.__CRSTRUCT_EXPORTS__ = { CRStruct, __acknowledge, __create, __delete, __garbageCollect, __merge, __read, __snapshot, __update };\n' +
     sourceMapComment
   )
 }
 
 const runtime = new EdgeRuntime()
-runtime.context.__OOSTRUCT_UUID = uuid
-runtime.context.__OOSTRUCT_UTILS = utils
+runtime.context.__CRSTRUCT_UUID = uuid
+runtime.context.__CRSTRUCT_UTILS = utils
 runtime.evaluate(`
   if (typeof globalThis.CustomEvent === 'undefined') {
     globalThis.CustomEvent = class CustomEvent extends Event {
@@ -79,7 +79,7 @@ runtime.evaluate(`
 const moduleCode = await readFile(esmDistPath, 'utf8')
 runtime.evaluate(toExecutableEdgeEsm(moduleCode))
 
-const results = await runOOStructSuite(runtime.context.__OOSTRUCT_EXPORTS__, {
+const results = await runCRStructSuite(runtime.context.__CRSTRUCT_EXPORTS__, {
   label: 'edge-runtime esm',
 })
 printResults(results)

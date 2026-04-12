@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { isUuidV7 } from '@sovereignbase/utils'
-import { OOStruct } from '../../dist/index.js'
+import { CRStruct } from '../../dist/index.js'
 
 export function createDefaults() {
   return {
@@ -12,7 +12,7 @@ export function createDefaults() {
 }
 
 export function createReplica(snapshot) {
-  return new OOStruct(createDefaults(), snapshot)
+  return new CRStruct(createDefaults(), snapshot)
 }
 
 export function captureEvents(replica) {
@@ -47,6 +47,10 @@ export function captureEvents(replica) {
 }
 
 export function readSnapshot(replica) {
+  return replica.toJSON()
+}
+
+export function emitSnapshot(replica) {
   let snapshot
   replica.addEventListener(
     'snapshot',
@@ -74,10 +78,16 @@ export function readAck(replica) {
   return ack
 }
 
+export function readState(replica) {
+  const descriptor = Reflect.getOwnPropertyDescriptor(replica, 'state')
+  assert.ok(descriptor)
+  return descriptor.value
+}
+
 export function createValidUuid(seed = 'seed') {
   const replica = createReplica()
-  replica.update('name', seed)
-  return readSnapshot(replica).name.__uuidv7
+  assert.equal(Reflect.set(replica, 'name', seed), true)
+  return readSnapshot(replica).name.uuidv7
 }
 
 export function cloneSnapshot(snapshot) {
@@ -89,10 +99,10 @@ export function normalizeSnapshot(snapshot) {
   for (const key of Object.keys(snapshot).sort()) {
     const entry = snapshot[key]
     normalized[key] = {
-      __uuidv7: entry.__uuidv7,
-      __value: structuredClone(entry.__value),
-      __after: entry.__after,
-      __overwrites: [...entry.__overwrites].sort(),
+      uuidv7: entry.uuidv7,
+      value: structuredClone(entry.value),
+      predecessor: entry.predecessor,
+      tombstones: [...entry.tombstones].sort(),
     }
   }
   return normalized
@@ -102,20 +112,20 @@ export function assertSnapshotShape(snapshot) {
   assert.deepEqual(Object.keys(snapshot), ['name', 'count', 'meta', 'tags'])
   for (const entry of Object.values(snapshot)) {
     assert.equal(typeof entry, 'object')
-    assert.equal(Array.isArray(entry.__overwrites), true)
-    assert.equal(isUuidV7(entry.__uuidv7), true)
-    assert.equal(isUuidV7(entry.__after), true)
-    assert.equal(entry.__overwrites.includes(entry.__after), true)
+    assert.equal(Array.isArray(entry.tombstones), true)
+    assert.equal(isUuidV7(entry.uuidv7), true)
+    assert.equal(isUuidV7(entry.predecessor), true)
+    assert.equal(entry.tombstones.includes(entry.predecessor), true)
   }
 }
 
-export function assertOOStructError(error, code) {
+export function assertCRStructError(error, code) {
   assert.ok(error)
-  assert.equal(error.name, 'OOStructError')
+  assert.equal(error.name, 'CRStructError')
   assert.equal(error.code, code)
   assert.match(
     String(error.message),
-    /\{@sovereignbase\/observed-overwrite-struct\}/
+    /\{@sovereignbase\/convergent-replicated-struct\}/
   )
   return true
 }

@@ -1,5 +1,5 @@
 import * as api from '../../../dist/index.js'
-import { runOOStructSuite } from '../shared/suite.mjs'
+import { runCRStructSuite } from '../shared/suite.mjs'
 
 export default {
   async fetch(request) {
@@ -8,7 +8,7 @@ export default {
     }
 
     try {
-      const results = await runOOStructSuite(api, {
+      const results = await runCRStructSuite(api, {
         label: 'cloudflare-workers esm',
       })
 
