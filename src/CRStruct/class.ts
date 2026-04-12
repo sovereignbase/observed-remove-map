@@ -16,26 +16,23 @@ import {
 import { __create, __read, __update, __delete } from '../core/crud/index.js'
 
 /**
- * Represents an observed-overwrite struct replica.
- *
- * The struct shape is fixed by the provided default values.
+ * Runtime implementation for a proxy-backed CR-Struct replica.
  */
 export class CRStruct<T extends Record<string, unknown>> {
-  [key: keyof T]: T[keyof T]
   declare private readonly state: CRStructState<T>
   declare private readonly eventTarget: EventTarget
 
   /**
    * Creates a replica from default values and an optional snapshot.
    *
+   * The struct shape is fixed by the provided default values. The returned
+   * proxy exposes those fields as direct properties on the instance.
+   *
    * @param defaults - The default field values that define the struct shape.
-   * @param snapshot - An optional serialized snapshot used for hydration.
+   * @param snapshot - An optional serialized snapshot used to hydrate the replica.
    * @throws {CRStructError} Thrown when the default values are not supported by `structuredClone`.
    */
-  constructor(
-    defaults: { [K in keyof T]: T[K] },
-    snapshot?: CRStructSnapshot<T>
-  ) {
+  constructor(defaults: T, snapshot?: CRStructSnapshot<T>) {
     Object.defineProperties(this, {
       state: {
         value: __create<T>(defaults, snapshot),
@@ -53,7 +50,7 @@ export class CRStruct<T extends Record<string, unknown>> {
     const keys = new Set(Object.keys(defaults))
     return new Proxy(this, {
       get(target, key, receiver) {
-        // Preserve normal property access for unkown keys.
+        // Preserve normal property access for unknown keys.
         if (typeof key !== 'string' || !keys.has(key))
           return Reflect.get(target, key, receiver)
         return __read(key, target.state)
@@ -122,6 +119,11 @@ export class CRStruct<T extends Record<string, unknown>> {
     })
   }
 
+  /**
+   * Applies a remote or local delta to the replica state.
+   *
+   * @param crStructDelta - The partial serialized field state to merge.
+   */
   merge(crStructDelta: CRStructDelta<T>): void {
     const result = __merge<T>(crStructDelta, this.state)
     if (!result) return
@@ -180,6 +182,9 @@ export class CRStruct<T extends Record<string, unknown>> {
     return Object.keys(this.state.entries) as Array<K>
   }
 
+  /**
+   * Resets every field in the replica back to its default value.
+   */
   clear(): void {
     const result = __delete(this.state)
     if (result) {
@@ -197,6 +202,11 @@ export class CRStruct<T extends Record<string, unknown>> {
     }
   }
 
+  /**
+   * Returns a cloned plain object view of the current replica fields.
+   *
+   * @returns The current field values keyed by field name.
+   */
   clone(): T {
     const out = {} as T
     for (const [key, entry] of Object.entries(this.state.entries)) {
@@ -229,7 +239,7 @@ export class CRStruct<T extends Record<string, unknown>> {
   }
 
   /**
-   * Returns a serializable snapshot representation of this list.
+   * Returns a serializable snapshot representation of this replica.
    *
    * Called automatically by `JSON.stringify`.
    */
@@ -237,7 +247,7 @@ export class CRStruct<T extends Record<string, unknown>> {
     return __snapshot<T>(this.state)
   }
   /**
-   * Returns this list as a JSON string.
+   * Returns this replica as a JSON string.
    */
   toString(): string {
     return JSON.stringify(this)
@@ -255,7 +265,7 @@ export class CRStruct<T extends Record<string, unknown>> {
     return this.toJSON()
   }
   /**
-   * Iterates over the current live values in index order.
+   * Iterates over the current live field entries.
    */
   *[Symbol.iterator](): IterableIterator<[keyof T, T[keyof T]]> {
     for (const [key, entry] of Object.entries(this.state.entries)) {
