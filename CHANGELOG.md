@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/sovereignbase/convergent-replicated-struct/compare/v1.1.0...v1.1.1) (2026-04-12)
+
+
+### Bug Fixes
+
+* Fixed package.json homepage url. ([3adae50](https://github.com/sovereignbase/convergent-replicated-struct/commit/3adae50870743201246b18328f938e54411302ce))
+
 ## [1.1.0](https://github.com/sovereignbase/convergent-replicated-struct/compare/v1.0.1...v1.1.0) (2026-04-12)
 
 
