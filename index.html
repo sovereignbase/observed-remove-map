@@ -6,11 +6,11 @@
     <title>Convergent Replicated Struct (CR-Struct)</title>
     <meta
       name="description"
-      content="Specification and reference JavaScript binding for a state-based convergent replicated structCRDT with fixed keys, UUIDv7 field versions, overwrite tracking, delta propagation, acknowledgement frontiers, and garbage collection."
+      content="Specification and reference JavaScript binding for a convergent replicated struct delta CRDT with fixed keys, UUIDv7 field identities, per-field tombstone acknowledgements, and garbage collection."
     />
     <meta
       name="keywords"
-      content="observed overwrite struct, cr-struct, crdt, uuidv7, replication, delta, snapshot, acknowledgement, garbage collection, javascript, typescript"
+      content="cr-struct, convergent replicated struct, crdt, uuidv7, delta, snapshot, acknowledgement, garbage collection, javascript, typescript"
     />
     <meta name="author" content="Jori Lehtinen" />
     <meta
@@ -40,7 +40,7 @@
     />
     <meta
       property="og:description"
-      content="Specification and reference JavaScript binding for a state-based convergent replicated structCRDT with fixed keys, UUIDv7 field versions, overwrite tracking, delta propagation, acknowledgement frontiers, and garbage collection."
+      content="Specification and reference JavaScript binding for a convergent replicated struct delta CRDT with fixed keys, UUIDv7 field identities, per-field tombstone acknowledgements, and garbage collection."
     />
     <meta
       property="og:url"
@@ -55,7 +55,7 @@
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="Sovereignbase social sharing image for the convergent replicated structspecification."
+      content="Sovereignbase social sharing image for the CR-Struct specification."
     />
     <meta name="twitter:card" content="summary_large_image" />
     <meta
@@ -64,7 +64,7 @@
     />
     <meta
       name="twitter:description"
-      content="Specification and reference JavaScript binding for a state-based convergent replicated structCRDT with fixed keys, UUIDv7 field versions, overwrite tracking, delta propagation, acknowledgement frontiers, and garbage collection."
+      content="Specification and reference JavaScript binding for a convergent replicated struct delta CRDT with fixed keys, UUIDv7 field identities, per-field tombstone acknowledgements, and garbage collection."
     />
     <meta
       name="twitter:image"
@@ -72,7 +72,7 @@
     />
     <meta
       name="twitter:image:alt"
-      content="Sovereignbase social sharing image for the convergent replicated structspecification."
+      content="Sovereignbase social sharing image for the CR-Struct specification."
     />
     <meta name="twitter:creator" content="@jortsupetterson" />
     <script
@@ -116,13 +116,13 @@
           INFRA: {
             title: 'Infra',
             href: 'https://infra.spec.whatwg.org/',
-            publisher: 'WhatWG',
+            publisher: 'WHATWG',
             date: '2026-03',
           },
           HTML: {
             title: '2.7 Safe passing of structured data',
             href: 'https://html.spec.whatwg.org/multipage/structured-data.html',
-            publisher: 'WhatWG',
+            publisher: 'WHATWG',
             date: '2026-04',
           },
         },
@@ -181,7 +181,7 @@
             "name": "@sovereignbase/convergent-replicated-struct",
             "alternateName": ["convergent-replicated-struct", "cr-struct"],
             "url": "https://sovereignbase.dev/convergent-replicated-struct/",
-            "description": "State-based CRDT for fixed-key object structs with UUIDv7 field versions, overwrite tracking, delta propagation, acknowledgement frontiers, and garbage collection.",
+            "description": "Convergent replicated struct delta CRDT with fixed keys, UUIDv7 field identities, per-field tombstone acknowledgements, and garbage collection.",
             "codeRepository": "https://github.com/sovereignbase/convergent-replicated-struct",
             "license": "https://www.apache.org/licenses/LICENSE-2.0",
             "programmingLanguage": ["TypeScript", "JavaScript"],
@@ -194,14 +194,16 @@
               "Edge Runtime"
             ],
             "keywords": [
+              "uuidv7",
+              "convergent",
+              "replicated",
+              "delta",
               "crdt",
               "convergent-replicated-struct",
               "cr-struct",
-              "uuidv7",
-              "replication",
-              "overwrite-tracking",
-              "acknowledgement",
-              "garbage-collection"
+              "core",
+              "crud",
+              "mags"
             ],
             "image": "https://sovereignbase.dev/sovereignbase_social_sharing_image.png",
             "isAccessibleForFree": true,
@@ -222,10 +224,10 @@
           {
             "@type": "TechArticle",
             "@id": "https://sovereignbase.dev/convergent-replicated-struct/#specification",
-            "headline": "convergent replicated struct(CR-Struct)",
-            "name": "convergent replicated struct(CR-Struct)",
+            "headline": "Convergent Replicated Struct (CR-Struct)",
+            "name": "Convergent Replicated Struct (CR-Struct)",
             "url": "https://sovereignbase.dev/convergent-replicated-struct/",
-            "description": "Specification and reference JavaScript binding for a state-based convergent replicated structCRDT with fixed keys, UUIDv7 field versions, overwrite tracking, delta propagation, acknowledgement frontiers, and garbage collection.",
+            "description": "Specification and reference JavaScript binding for a convergent replicated struct delta CRDT with fixed keys, UUIDv7 field identities, per-field tombstone acknowledgements, and garbage collection.",
             "inLanguage": "en",
             "isPartOf": {
               "@id": "https://sovereignbase.dev/convergent-replicated-struct/#website"
@@ -253,8 +255,8 @@
             "@type": "WebPage",
             "@id": "https://sovereignbase.dev/convergent-replicated-struct/#webpage",
             "url": "https://sovereignbase.dev/convergent-replicated-struct/",
-            "name": "convergent replicated struct(CR-Struct)",
-            "description": "Specification and reference JavaScript binding for a state-based convergent replicated structCRDT with fixed keys, UUIDv7 field versions, overwrite tracking, delta propagation, acknowledgement frontiers, and garbage collection.",
+            "name": "Convergent Replicated Struct (CR-Struct)",
+            "description": "Specification and reference JavaScript binding for a convergent replicated struct delta CRDT with fixed keys, UUIDv7 field identities, per-field tombstone acknowledgements, and garbage collection.",
             "inLanguage": "en",
             "isPartOf": {
               "@id": "https://sovereignbase.dev/convergent-replicated-struct/#website"
@@ -297,19 +299,21 @@
     <section id="abstract">
       <p>
         This document defines Convergent Replicated Struct (CR-Struct), a delta
-        CRDT for an fixed-key object struct. Each key resolves to a single
-        convergent value. Every update is assigned a UUIDv7, and deletions are
-        tracked as a list of UUIDv7 identifiers. The specification defines the
-        data structure, merge rules, snapshot and delta formats,
-        garbage-collection rules, acknowledgement formats, and one conforming
-        JavaScript binding.
+        CRDT for a fixed-key object-like data structure. Each field resolves to
+        one visible value. Every overwrite is assigned a UUIDv7, and overwritten
+        identifiers are retained as per-field tombstones.
+      </p>
+      <p>
+        The specification defines the data structure, merge rules, snapshot and
+        delta formats, garbage-collection rules, acknowledgement formats, and
+        one conforming JavaScript binding.
       </p>
     </section>
 
     <section id="sotd">
       <p>
-        CR-Struct is designed to serve as a core for use-case-optimized CRDT
-        interfaces, like Person, Organization, Event objects.
+        CR-Struct is designed to serve as a small replicated core for fixed-key
+        object state, configuration state, and nested CRDT compositions.
       </p>
       <p>
         This specification is maintained alongside a reference implementation.
@@ -320,13 +324,13 @@
         <li>
           <a
             href="https://www.npmjs.com/package/@sovereignbase/convergent-replicated-struct"
-            >NPM Registry
-          </a>
+            >NPM Registry</a
+          >
         </li>
         <li>
           <a href="https://jsr.io/@sovereignbase/convergent-replicated-struct"
-            >JSR Registry
-          </a>
+            >JSR Registry</a
+          >
         </li>
       </ul>
 
@@ -336,107 +340,112 @@
     <section id="conformance">
       <p>
         Unless otherwise stated, data-structure and algorithm terms such as
-        <em>list</em>, <em>map</em>, <em>struct</em>, <em>parameters</em>,
-        <em>variables</em>, and <em>iterate</em> are used with the meanings
-        defined by Infra [[INFRA]].
+        <em>list</em>, <em>set</em>, <em>map</em>, <em>record</em>,
+        <em>parameters</em>, <em>variables</em>, and <em>iterate</em> are used
+        with the meanings defined by Infra [[INFRA]].
       </p>
       <p>
-        A conforming implementation MUST preserve the replica convergence and
-        deletion semantics defined by the algorithms in this specification.
+        A conforming implementation MUST preserve the fixed-key replica shape,
+        field overwrite semantics, convergence properties, and per-field
+        garbage-collection safety defined by the algorithms in this
+        specification.
       </p>
     </section>
 
     <section>
       <h2>Terminology</h2>
       <p>
-        An <dfn>CR-Struct replica</dfn> is one independently mutable instance of
-        the data type.
-      </p>
-      <p>
-        A <dfn>default struct</dfn> is the application-supplied <a>struct</a>
-        whose keys and default values define the replica's field space.
-      </p>
-      <p>
-        A <dfn>field key</dfn> is one own property name from the
-        <a>default struct</a>.
-      </p>
-      <p>
-        A <dfn>field value</dfn> is the visible payload presently selected for a
-        given <a>field key</a>.
-      </p>
-      <p>
-        A <dfn>field state entry</dfn> is the per-key replicated state record
-        containing a current identifier, a predecessor identifier, a current
-        field value, and a set of overwritten identifiers.
+        A <dfn>CR-Struct replica</dfn> is one independently mutable instance of
+        the data structure.
       </p>
       <p>
         A <dfn>UUIDv7 identifier</dfn> is an identifier that is a valid UUID
         version 7 as defined by [[RFC9562]].
       </p>
       <p>
-        An <dfn>overwritten identifier</dfn> is a UUIDv7 that appears in a
-        <a>field state entry</a>'s set of overwritten identifiers.
+        A <dfn>serializable object</dfn> is an object that supports being
+        serialized, and later deserialized as defined by [[HTML]].
       </p>
       <p>
-        A <dfn>snapshot</dfn> is the full current replica state containing one
-        <a>field state entry</a> for every <a>field key</a>.
+        A <dfn>field key</dfn> is one own property name present in the replica's
+        default object.
       </p>
       <p>
-        A <dfn>delta</dfn> is a partial snapshot containing only the keys a
-        replica wishes to upstream.
+        A <dfn>field value</dfn> is the consumer-defined payload presently
+        selected for one <a>field key</a>.
       </p>
       <p>
-        A <dfn>well-formed snapshot entry</dfn> is a serialized field value that
-        parses as a valid field state entry for the corresponding
-        <a>default struct</a> field.
+        A <dfn>field entry</dfn> is the internal record for one
+        <a>field key</a>, consisting of a current winning <code>uuidv7</code>,
+        current winning <code>value</code>, current winning
+        <code>predecessor</code>, and a set of retained <code>tombstones</code>.
       </p>
       <p>
-        A snapshot input MAY contain malformed or unknown members. The reference
-        binding processes known keys individually and ignores entries that do
-        not parse.
+        A <dfn>predecessor identifier</dfn> is an <a>UUIDv7 identifier</a>
+        naming the immediately previous winning identifier for the same
+        <a>field key</a>.
+      </p>
+      <p>
+        A <dfn>field tombstone</dfn> is one overwritten
+        <a>UUIDv7 identifier</a> retained by a <a>field entry</a>.
+      </p>
+      <p>
+        An <dfn>acknowledgement frontier</dfn> is, for one <a>field key</a>, the
+        largest retained <a>field tombstone</a> under lexicographic comparison.
+      </p>
+      <p>
+        A <dfn>snapshot</dfn> is a full <a>serializable object</a> presentation
+        of the current <a>CR-Struct replica</a>.
+      </p>
+      <p>
+        A <dfn>delta</dfn> is a partial <a>snapshot</a> containing only the
+        fields a replica wishes to share.
+      </p>
+    </section>
+
+    <section id="core-model">
+      <h2>Core Model</h2>
+      <p>
+        A <a>CR-Struct replica</a> consists of a fixed set of
+        <a>field key</a>(s) defined at construction time. Each key stores
+        exactly one current visible <a>field value</a>, one current winning
+        <a>UUIDv7 identifier</a>, one current winning
+        <a>predecessor identifier</a>, and a set of retained
+        <a>field tombstone</a>(s).
+      </p>
+      <p>
+        The replica shape MUST remain fixed after construction. A conforming
+        implementation MUST ignore unknown keys arriving from snapshots, deltas,
+        and acknowledgement frontiers, and MUST preserve only keys present in
+        the default object supplied at construction time.
+      </p>
+      <p>
+        Each local overwrite produces a fresh winning
+        <a>UUIDv7 identifier</a>, moves the previous winning identifier into the
+        field's tombstone set, and records the previous winning identifier as
+        the new <a>predecessor identifier</a>.
+      </p>
+      <p>
+        On merge, each field is resolved independently. Incoming tombstones
+        extend local knowledge. Incoming winners may be adopted directly, may be
+        rejected with a reply delta, or may trigger a fresh local overwrite that
+        collapses a conflicting same-UUID state into one newer winning event.
+      </p>
+      <p>
+        A snapshot or delta input MAY contain malformed or unknown members. A
+        conforming implementation processes only the known top-level field keys
+        and ignores entries that do not successfully parse against the local
+        default field runtime type.
       </p>
     </section>
 
     <section>
-      <h2>Core Model</h2>
-      <p>Each <a>CR-Struct replica</a> maintains two logical objects:</p>
-      <ul>
-        <li>
-          a live struct keyed by <a>field key</a>, containing the visible
-          <a>field value</a> values; and
-        </li>
-        <li>
-          a state struct keyed by <a>field key</a>, containing one current
-          <a>field state entry</a> per field.
-        </li>
-      </ul>
-      <p>
-        Each current <a>field state entry</a> records one current
-        <a>UUIDv7 identifier</a>, one predecessor <a>UUIDv7 identifier</a>, one
-        current <a>field value</a>, and one set of
-        <a>overwritten identifier</a>s.
-      </p>
-      <p>
-        A UUIDv7 that appears in a field's overwrite set is an
-        <a>overwritten identifier</a>. If an identifier is overwritten, a
-        conforming implementation MUST NOT later make it current again for that
-        same <a>field key</a>.
-      </p>
-      <p>
-        The predecessor identifier names one overwritten predecessor and MUST
-        itself be present in the field's overwrite set. The reference binding
-        bootstraps each field with a synthetic predecessor UUIDv7 so that every
-        field state entry always names an already overwritten predecessor.
-      </p>
-    </section>
-
-        <section>
       <h2>Data Structure</h2>
       <p>
         The same logical replica can be viewed through three useful
         representations: the serializable snapshot used for transport and
         storage, one possible runtime projection used internally by a binding,
-        and the final consumer-facing visible sequence.
+        and the final consumer-facing visible object.
       </p>
       <section>
         <h3>Snapshot</h3>
@@ -474,60 +483,111 @@
 
         <section>
           <h4>Create</h4>
-          <p>
-            A create operation constructs a new replica from a
-            <a>default struct</a> and an optional <a>snapshot</a>.
-          </p>
-          <p>
-            If a snapshot record is supplied, the replica attempts to adopt each
-            known field whose incoming value is a
-            <a>well-formed snapshot entry</a>. Unknown or malformed entries are
-            ignored. Any field not adopted from the snapshot is initialized from
-            the default struct with fresh UUIDv7 state.
-          </p>
+          <ol class="algorithm">
+            <li>
+              Attempt to copy the supplied defaults object with
+              <code>structuredClone</code>. If copying fails, then fail.
+            </li>
+            <li>
+              Let the result be a new empty <a>CR-Struct replica</a> whose
+              <code>entries</code> member is empty and whose
+              <code>defaults</code> member is the copied defaults object.
+            </li>
+            <li>
+              Let <var>snapshotIsRecord</var> be true if the supplied snapshot
+              is a record, otherwise false.
+            </li>
+            <li>
+              For each own <a>field key</a> of the original defaults object:
+              <ol>
+                <li>
+                  Let <var>defaultValue</var> be the copied default value for
+                  that key.
+                </li>
+                <li>
+                  If <var>snapshotIsRecord</var> is true, the snapshot has an
+                  own property for that key, and the snapshot entry successfully
+                  runs the <a>mint a snapshot field entry</a> algorithm against
+                  <var>defaultValue</var>, then store the minted entry as the
+                  live field entry and continue to the next key.
+                </li>
+                <li>
+                  Otherwise mint one fresh root UUIDv7 and one fresh winning
+                  UUIDv7.
+                </li>
+                <li>
+                  Store a field entry whose <code>uuidv7</code> is the fresh
+                  winning UUIDv7, whose <code>predecessor</code> is the fresh
+                  root UUIDv7, whose <code>value</code> is
+                  <var>defaultValue</var>, and whose <code>tombstones</code> set
+                  initially contains only the fresh root UUIDv7.
+                </li>
+              </ol>
+            </li>
+            <li>Return the result.</li>
+          </ol>
         </section>
 
         <section>
           <h4>Read</h4>
-          <p>
-            A read operation returns the current visible <a>field value</a> for
-            a known <a>field key</a>.
-          </p>
-          <p>
-            The reference binding returns a detached clone rather than the live
-            stored value reference.
-          </p>
+          <ol class="algorithm">
+            <li>
+              Let <var>entry</var> be the current live <a>field entry</a> for
+              the supplied <a>field key</a>.
+            </li>
+            <li>
+              Return a detached structured clone of <var>entry</var>'s
+              <code>value</code>.
+            </li>
+          </ol>
         </section>
 
         <section>
           <h4>Update</h4>
-          <p>
-            An update operation MUST mint a fresh <a>UUIDv7 identifier</a> for
-            the target <a>field key</a>, make the previously current UUIDv7 the
-            new predecessor identifier, add that predecessor to the overwrite
-            set, and set the <a>field value</a> to the supplied payload.
-          </p>
-          <p>
-            In the reference binding, the payload MUST be
-            <code>structuredClone</code>-compatible and MUST have the same
-            runtime prototype category as the corresponding default value. Every
-            successful local update creates a new per-field <a>delta</a> and a
-            new per-field change event.
-          </p>
+          <ol class="algorithm">
+            <li>
+              Attempt to copy the supplied value with
+              <code>structuredClone</code>. If copying fails, then fail.
+            </li>
+            <li>
+              If the runtime prototype of the copied value does not equal the
+              runtime prototype of the default value for the supplied
+              <a>field key</a>, then fail.
+            </li>
+            <li>
+              Run the local overwrite procedure for that field using the copied
+              value.
+            </li>
+            <li>
+              Return a <a>delta</a> containing the new snapshot entry for that
+              field together with a visible change patch mapping the key to the
+              copied value.
+            </li>
+          </ol>
         </section>
 
         <section>
           <h4>Delete</h4>
-          <p>
-            In the reference binding, <code>delete()</code> resets fields to
-            their default values. It does not remove the <a>field key</a> from
-            the struct shape.
-          </p>
-          <p>
-            If a key is supplied, only that field is reset. If no key is
-            supplied, every field in the <a>default struct</a> is reset. Unknown
-            explicit keys are ignored.
-          </p>
+          <ol class="algorithm">
+            <li>
+              If a specific key was supplied and the replica does not contain
+              that key, then fail.
+            </li>
+            <li>
+              If a specific key was supplied, then run the local overwrite
+              procedure for that field using the field's default value.
+            </li>
+            <li>
+              Otherwise, for each <a>field key</a> in the replica, run the local
+              overwrite procedure for that field using that field's default
+              value.
+            </li>
+            <li>
+              Return a <a>delta</a> containing the resulting snapshot entries
+              together with a visible change patch mapping each touched key to
+              its reset value.
+            </li>
+          </ol>
         </section>
       </section>
 
@@ -536,587 +596,546 @@
 
         <section>
           <h4>Merge</h4>
-          <p>
-            Merge operates over a <a>delta</a> or a full <a>snapshot</a>. A
-            conforming implementation MUST process the incoming state one
-            <a>field key</a> at a time.
-          </p>
-          <p>When merging one incoming field state entry:</p>
           <ol class="algorithm">
-            <li>If the field key is unknown locally, continue.</li>
             <li>
-              If the incoming value does not parse as a valid field state entry
-              for that key, continue.
+              If the supplied candidate is not a record, then return no change.
+            </li>
+            <li>Let the reply delta be an empty record.</li>
+            <li>Let the visible change patch be an empty record.</li>
+            <li>
+              For each own property of the incoming candidate:
+              <ol>
+                <li>
+                  If the property name is not a known <a>field key</a>, then
+                  continue.
+                </li>
+                <li>
+                  Run the <a>mint a snapshot field entry</a> algorithm against
+                  the local default value for that key. If minting fails, then
+                  continue.
+                </li>
+                <li>
+                  Let <var>target</var> be the current local field entry for
+                  that key.
+                </li>
+                <li>
+                  Let <var>current</var> be a shallow copy of <var>target</var>.
+                </li>
+                <li>
+                  Let <var>frontier</var> be the lexicographically greatest
+                  tombstone currently retained by <var>target</var>.
+                </li>
+                <li>
+                  For each incoming tombstone in the candidate field entry:
+                  <ol>
+                    <li>
+                      If the tombstone is less than or equal to
+                      <var>frontier</var>, continue.
+                    </li>
+                    <li>
+                      If <var>target</var> already retains that tombstone,
+                      continue.
+                    </li>
+                    <li>Add the tombstone to <var>target</var>.</li>
+                  </ol>
+                </li>
+                <li>
+                  If <var>target</var> already tombstones the candidate
+                  <code>uuidv7</code>, then continue.
+                </li>
+                <li>
+                  If <var>current</var>'s <code>uuidv7</code> equals the
+                  candidate <code>uuidv7</code>:
+                  <ol>
+                    <li>
+                      If <var>current</var>'s <code>predecessor</code> is
+                      lexicographically less than the candidate
+                      <code>predecessor</code>, then adopt the candidate
+                      <code>value</code> and <code>predecessor</code>, add the
+                      candidate predecessor to the tombstone set, record the
+                      visible field change, and continue.
+                    </li>
+                    <li>
+                      Otherwise run the local overwrite procedure using
+                      <var>current</var>'s value, append the resulting snapshot
+                      entry to the reply delta, and continue.
+                    </li>
+                  </ol>
+                </li>
+                <li>
+                  If <var>current</var>'s <code>uuidv7</code> equals the
+                  candidate <code>predecessor</code>, or the target tombstones
+                  already contain <var>current</var>'s <code>uuidv7</code>, or
+                  the candidate <code>uuidv7</code> is lexicographically greater
+                  than <var>current</var>'s <code>uuidv7</code>, then:
+                  <ol>
+                    <li>
+                      Adopt the candidate <code>uuidv7</code>,
+                      <code>value</code>, and <code>predecessor</code>.
+                    </li>
+                    <li>
+                      Add the candidate predecessor and the previous local
+                      winner's UUIDv7 to the target tombstone set.
+                    </li>
+                    <li>Record the visible field change.</li>
+                    <li>Continue.</li>
+                  </ol>
+                </li>
+                <li>
+                  Otherwise add the candidate <code>uuidv7</code> to the target
+                  tombstone set and append the current local field entry to the
+                  reply delta.
+                </li>
+              </ol>
             </li>
             <li>
-              Merge incoming overwrite knowledge into the local overwrite set
-              before making any winner decision.
+              If neither the reply delta nor the visible change patch contains
+              any own properties, then return no change.
             </li>
             <li>
-              If the local overwrite set now contains the incoming UUIDv7,
-              continue.
-            </li>
-            <li>
-              If the current and incoming entries share the same UUIDv7, then
-              the incoming entry wins only when its predecessor identifier is
-              lexicographically greater. Otherwise the replica MUST mint a fresh
-              local overwrite using the current visible <a>field value</a> and
-              emit that repair state as <a>delta</a>.
-            </li>
-            <li>
-              Otherwise the incoming entry wins if any of the following is true:
-              its predecessor identifier equals the local current UUIDv7; the
-              local overwrite set already contains the local current UUIDv7; or
-              the incoming UUIDv7 is lexicographically greater than the local
-              current UUIDv7.
-            </li>
-            <li>
-              If the incoming entry does not win, its UUIDv7 MUST be added to
-              the local overwrite set and the local field state MAY be emitted
-              back out as rebuttal <a>delta</a>.
+              Return the reply delta together with the visible change patch.
             </li>
           </ol>
         </section>
 
         <section>
           <h4>Acknowledge</h4>
-          <p>
-            An acknowledge operation emits one acknowledgement frontier per
-            known <a>field key</a>.
-          </p>
-          <p>
-            In the reference binding, the acknowledgement frontier for a field
-            is the lexicographically greatest overwritten UUIDv7 currently known
-            for that field.
-          </p>
+          <ol class="algorithm">
+            <li>Let the result be an empty acknowledgement record.</li>
+            <li>
+              For each local <a>field entry</a>:
+              <ol>
+                <li>
+                  Iterate the retained tombstones and keep the lexicographically
+                  greatest tombstone seen so far.
+                </li>
+                <li>
+                  Store that greatest tombstone in the result under the field's
+                  key.
+                </li>
+              </ol>
+            </li>
+            <li>Return the result.</li>
+          </ol>
         </section>
 
         <section>
           <h4>Garbage Collect</h4>
-          <p>
-            A garbage-collection operation accepts a list of acknowledgement
-            frontiers and compacts overwrite history that is already dead.
-          </p>
-          <p>
-            In the reference binding, garbage collection determines the smallest
-            acknowledged UUIDv7 per known key and removes overwritten
-            identifiers that are less than or equal to that frontier, except for
-            the current predecessor identifier named by <code>__after</code>.
+          <ol class="algorithm">
+            <li>
+              If the supplied list of acknowledgement frontier objects is empty,
+              then return.
+            </li>
+            <li>Let <var>smallestPerKey</var> be an empty record.</li>
+            <li>
+              For each supplied acknowledgement frontier object:
+              <ol>
+                <li>
+                  For each own property of that frontier:
+                  <ol>
+                    <li>
+                      If the property name is not a known <a>field key</a>, then
+                      continue.
+                    </li>
+                    <li>
+                      If the frontier value is not a valid
+                      <a>UUIDv7 identifier</a>, then continue.
+                    </li>
+                    <li>
+                      If <var>smallestPerKey</var> already stores a value for
+                      that key and that stored value is lexicographically less
+                      than or equal to the new frontier, then continue.
+                    </li>
+                    <li>
+                      Otherwise store the new frontier as the smallest known
+                      acknowledgement for that key.
+                    </li>
+                  </ol>
+                </li>
+              </ol>
+            </li>
+            <li>
+              For each key stored in <var>smallestPerKey</var>:
+              <ol>
+                <li>
+                  Let <var>target</var> be the current local field entry for
+                  that key.
+                </li>
+                <li>
+                  Remove every retained tombstone less than or equal to the
+                  smallest acknowledgement for that key, except the field's
+                  current <code>predecessor</code>.
+                </li>
+              </ol>
+            </li>
+          </ol>
+          <p class="note">
+            This algorithm is only safe when the caller supplies a
+            membership-complete set of acknowledgement frontiers covering every
+            replica whose future convergence must still be preserved. Supplying
+            only a partial frontier set is caller misuse and does not guarantee
+            that an offline replica can later catch up from deltas alone.
           </p>
         </section>
 
         <section>
           <h4>Snapshot</h4>
+          <ol class="algorithm">
+            <li>Let the result be an empty record.</li>
+            <li>
+              For each current local <a>field entry</a>, run the
+              <a>shed a live field entry</a> algorithm.
+            </li>
+            <li>
+              Store each shed field entry in the result under its field key.
+            </li>
+            <li>Return the resulting <a>snapshot</a>.</li>
+          </ol>
+        </section>
+      </section>
+    </section>
+
+    <section>
+      <h2>Reference JavaScript Binding</h2>
+      <p>
+        This section defines one conforming JavaScript binding for the model
+        above.
+      </p>
+
+      <section>
+        <h3>API Summary</h3>
+        <pre class="idl">
+[Exposed=*]
+interface CRStruct {
+  constructor(object defaults, optional object snapshot = {});
+  undefined merge(optional object delta = {});
+  undefined acknowledge();
+  undefined garbageCollect(sequence&lt;object&gt; frontiers);
+  undefined snapshot();
+  sequence&lt;DOMString&gt; keys();
+  undefined clear();
+  object clone();
+  sequence&lt;any&gt; values();
+  sequence&lt;sequence&lt;any&gt;&gt; entries();
+  undefined addEventListener(
+    DOMString type,
+    EventListener? listener,
+    optional (AddEventListenerOptions or boolean) options = {}
+  );
+  undefined removeEventListener(
+    DOMString type,
+    EventListener? listener,
+    optional (EventListenerOptions or boolean) options = {}
+  );
+  object toJSON();
+  DOMString toString();
+  iterable&lt;DOMString, any&gt;;
+};
+
+dictionary CRStructSnapshotEntry {
+  required DOMString uuidv7;
+  required any value;
+  required DOMString predecessor;
+  required sequence&lt;DOMString&gt; tombstones;
+};
+
+typedef record&lt;DOMString, CRStructSnapshotEntry&gt; CRStructSnapshot;
+typedef record&lt;DOMString, CRStructSnapshotEntry&gt; CRStructDelta;
+typedef record&lt;DOMString, any&gt; CRStructChange;
+typedef record&lt;DOMString, DOMString&gt; CRStructAck;
+        </pre>
+        <p>
+          The binding additionally exposes direct property access through a
+          JavaScript <code>Proxy</code>. Reading <code>struct.key</code> returns
+          a detached copy of the current value for that field. Writing
+          <code>struct.key = value</code> performs a local overwrite, and
+          <code>delete struct.key</code> resets that field to its default value.
+        </p>
+        <p>
+          Only keys present in the constructor's defaults object participate in
+          proxy field access. The binding resolves those known field keys before
+          ordinary reflective property access.
+        </p>
+        <p>
+          The constructor and <a data-link-for="CRStruct">merge()</a> methods
+          are typed as taking generic objects in the coarse Web IDL summary
+          above so that the IDL matches the permissive JavaScript ingress
+          behavior. The expected object shapes are
+          <code>CRStructSnapshot</code> and <code>CRStructDelta</code> as
+          defined by the declarations above.
+        </p>
+        <p>
+          <code>JSON.stringify(struct)</code> serializes the binding through its
+          current <a>snapshot</a>, <code>for...of</code> iterates detached
+          <code>[key, value]</code> pairs for the current live fields, and
+          <code>toString()</code> returns the JSON string form of the current
+          snapshot.
+        </p>
+      </section>
+
+      <section>
+        <h3>Errors</h3>
+        <p>
+          The JavaScript binding throws <code>CRStructError</code> with a string
+          <code>code</code> attribute for local API misuse.
+        </p>
+        <dl>
+          <dt><code>DEFAULTS_NOT_CLONEABLE</code></dt>
+          <dd>
+            Thrown when construction receives a defaults object that is not
+            supported by <code>structuredClone</code>.
+          </dd>
+          <dt><code>VALUE_NOT_CLONEABLE</code></dt>
+          <dd>
+            Thrown when a local field overwrite receives a value that is not
+            supported by <code>structuredClone</code>.
+          </dd>
+          <dt><code>VALUE_TYPE_MISMATCH</code></dt>
+          <dd>
+            Thrown when a local field overwrite receives a value whose runtime
+            prototype does not match that field's default value runtime
+            prototype.
+          </dd>
+        </dl>
+      </section>
+
+      <section>
+        <h3>Events</h3>
+        <p>
+          The JavaScript binding maintains an internal
+          <code>EventTarget</code> object as defined by DOM [[DOM]].
+        </p>
+        <p>
+          The binding forwards addEventListener() and removeEventListener() to
+          that internal event target. Local mutations and merges dispatch
+          synthetic events through the same target.
+        </p>
+        <p>
+          The JavaScript binding defines four synthetic event types. Each is a
+          <code>CustomEvent</code> object whose <code>detail</code> attribute is
+          initialized as described below [[DOM]].
+        </p>
+        <dl>
+          <dt><dfn>delta event</dfn></dt>
+          <dd>
+            A <code>CustomEvent</code> whose <code>detail</code> is a
+            <a>delta</a>. The binding dispatches this event for local field
+            mutations and for merges that need to emit a reply delta.
+          </dd>
+          <dt><dfn>change event</dfn></dt>
+          <dd>
+            A <code>CustomEvent</code> whose <code>detail</code> is a partial
+            object mapping changed field keys to their new visible values.
+          </dd>
+          <dt><dfn>ack event</dfn></dt>
+          <dd>
+            A <code>CustomEvent</code> whose <code>detail</code> is the current
+            per-field acknowledgement frontier produced when
+            <a data-link-for="CRStruct">acknowledge()</a> is invoked.
+          </dd>
+          <dt><dfn>snapshot event</dfn></dt>
+          <dd>
+            A <code>CustomEvent</code> whose <code>detail</code> is the full
+            current snapshot produced when
+            <a data-link-for="CRStruct">snapshot()</a> is invoked.
+          </dd>
+        </dl>
+        <p>
+          Direct property writes, direct property deletes, and
+          <a data-link-for="CRStruct">clear()</a> MUST dispatch
+          <a>delta event</a> before <a>change event</a>.
+          <a data-link-for="CRStruct">merge()</a> MAY dispatch
+          <a>delta event</a>, <a>change event</a>, or both, and when both are
+          dispatched the <a>delta event</a> MUST be dispatched first.
+          <a data-link-for="CRStruct">acknowledge()</a> MUST dispatch
+          <a>ack event</a>, and <a data-link-for="CRStruct">snapshot()</a> MUST
+          dispatch a <a>snapshot event</a>.
+        </p>
+      </section>
+
+      <section>
+        <h3>Auxiliary Algorithms</h3>
+
+        <section>
+          <h4><dfn>mint a snapshot field entry</dfn></h4>
+          <ol class="algorithm">
+            <li>
+              If the candidate value is not a record, then return failure.
+            </li>
+            <li>
+              If the candidate value does not have its own <code>uuidv7</code>,
+              <code>value</code>, <code>predecessor</code>, and
+              <code>tombstones</code> members, then return failure.
+            </li>
+            <li>
+              If the candidate value's <code>uuidv7</code> member is not a valid
+              <a>UUIDv7 identifier</a>, then return failure.
+            </li>
+            <li>
+              If the candidate value's <code>predecessor</code> member is not a
+              valid <a>UUIDv7 identifier</a>, then return failure.
+            </li>
+            <li>
+              If the candidate value's <code>tombstones</code> member is not a
+              list, then return failure.
+            </li>
+            <li>
+              Attempt to copy the candidate value's <code>value</code> member
+              with <code>structuredClone</code>. If copying fails, then return
+              failure.
+            </li>
+            <li>
+              If the copied value's runtime prototype does not equal the
+              supplied default value's runtime prototype, then return failure.
+            </li>
+            <li>
+              Initialize a new tombstone set from the listed tombstones,
+              retaining only valid <a>UUIDv7 identifier</a>(s).
+            </li>
+            <li>
+              If the resulting tombstone set contains the candidate
+              <code>uuidv7</code>, then return failure.
+            </li>
+            <li>
+              If the resulting tombstone set does not contain the candidate
+              <code>predecessor</code>, then return failure.
+            </li>
+            <li>Return the minted field entry.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h4><dfn>shed a live field entry</dfn></h4>
           <p>
-            A <a>snapshot</a> MUST contain enough information to recreate the
-            current field state entry for every known <a>field key</a>.
-          </p>
-          <p>
-            A <a>delta</a> MUST use the same per-field state-entry format as a
-            snapshot but MAY include only a subset of keys.
+            Return a new <a>serializable object</a> whose <code>uuidv7</code>,
+            <code>value</code>, <code>predecessor</code>, and
+            <code>tombstones</code> members equal the current live field entry
+            after converting the tombstone set into a list and after detaching
+            the value with <code>structuredClone</code>.
           </p>
         </section>
       </section>
 
       <section>
-        <h2>Reference JavaScript Binding</h2>
-        <p>
-          This section defines one conforming JavaScript binding for the model
-          above.
-        </p>
+        <h3>Methods</h3>
 
-        <section>
-          <h3>API Summary</h3>
-          <pre class="idl">
-[Exposed=*]
-interface CRStruct {
-  constructor(object defaults, optional object snapshot);
-  static CRStruct create(object defaults, optional object snapshot);
-  any read(DOMString key);
-  undefined update(DOMString key, any value);
-  undefined delete(optional DOMString key);
-  undefined merge(object replica);
-  undefined acknowledge();
-  undefined garbageCollect(sequence&lt;object&gt; frontiers);
-  undefined snapshot();
-  sequence&lt;DOMString&gt; keys();
-  sequence&lt;any&gt; values();
-  sequence&lt;any&gt; entries();
-  undefined addEventListener(DOMString type, any listener, optional any options);
-  undefined removeEventListener(DOMString type, any listener, optional any options);
-};
-
-dictionary CRStructSnapshotEntry {
-  required DOMString uuidv7;
-  required DOMString after;
-  required any value;
-  required FrozenArray&lt;DOMString&gt; overwrites;
-};
-        </pre
-          >
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">Constructor</dfn></h5>
           <p>
-            Snapshot and delta payloads are plain JavaScript objects keyed by
-            known fields. Change payloads are plain JavaScript objects keyed by
-            changed fields, and acknowledgement payloads are plain JavaScript
-            objects keyed by acknowledged fields.
-          </p>
-          <p>
-            The actual field-entry payload member names are
-            <code>__uuidv7</code>, <code>__after</code>, <code>__value</code>,
-            and <code>__overwrites</code>. The Web IDL above uses IDL-safe
-            member names because dictionary members cannot use the
-            double-underscore form.
-          </p>
-          <p>
-            The Web IDL above is a coarse binding summary. The precise key- and
-            value-level behavior is defined by the prose and algorithms below.
+            Construct a new binding whose internal state is the result of the
+            core create algorithm applied to the supplied defaults object and
+            optional <a>snapshot</a>.
           </p>
         </section>
 
-        <section>
-          <h3>Errors</h3>
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">direct property access</dfn></h5>
           <p>
-            The JavaScript binding throws <code>CRStructError</code> with a
-            string <code>code</code> attribute for local API misuse.
-          </p>
-          <dl>
-            <dt><code>DEFAULTS_NOT_CLONEABLE</code></dt>
-            <dd>
-              Thrown when constructor defaults are not supported by
-              <code>structuredClone</code>.
-            </dd>
-            <dt><code>VALUE_NOT_CLONEABLE</code></dt>
-            <dd>
-              Thrown when <a data-link-for="CRStruct">update()</a> receives a
-              value that is not supported by <code>structuredClone</code>.
-            </dd>
-            <dt><code>VALUE_TYPE_MISMATCH</code></dt>
-            <dd>
-              Thrown when <a data-link-for="CRStruct">update()</a> receives a
-              value whose runtime prototype category does not match the
-              corresponding default field value.
-            </dd>
-          </dl>
-        </section>
-
-        <section>
-          <h3>Events</h3>
-          <p>
-            The JavaScript binding maintains an internal
-            <code>EventTarget</code> object as defined by DOM [[DOM]].
-          </p>
-          <p>
-            This binding is not specified as inheriting from
-            <code>EventTarget</code>. Instead, its listener methods forward to
-            that internal event target, and its local mutations and merges
-            dispatch synthetic events through it.
-          </p>
-          <p>
-            The JavaScript binding defines four synthetic event types. Each is a
-            <code>CustomEvent</code> object whose <code>detail</code> attribute
-            is initialized as described below [[DOM]].
-          </p>
-          <dl>
-            <dt><dfn>delta event</dfn></dt>
-            <dd>
-              A <code>CustomEvent</code> whose <code>detail</code> is a
-              per-field <a>delta</a>. The binding dispatches this event for
-              local overwrites and for merge-time repair or rebuttal state that
-              should be upstreamed.
-            </dd>
-            <dt><dfn>change event</dfn></dt>
-            <dd>
-              A <code>CustomEvent</code> whose <code>detail</code> maps changed
-              keys to their new visible values.
-            </dd>
-            <dt><dfn>ack event</dfn></dt>
-            <dd>
-              A <code>CustomEvent</code> whose <code>detail</code> maps known
-              keys to their current acknowledgement frontier values produced
-              when
-              <a data-link-for="CRStruct">acknowledge()</a>
-              is invoked.
-            </dd>
-            <dt><dfn>snapshot event</dfn></dt>
-            <dd>
-              A <code>CustomEvent</code> whose <code>detail</code> is the full
-              current snapshot produced when
-              <a data-link-for="CRStruct">snapshot()</a>
-              is invoked.
-            </dd>
-          </dl>
-          <p>
-            <a data-link-for="CRStruct">update()</a> and
-            <a data-link-for="CRStruct">delete()</a> MUST dispatch
-            <a>delta event</a> before <a>change event</a>. A merge MUST dispatch
-            <a>delta event</a> only when it produces egress delta material and
-            MUST dispatch <a>change event</a> only when visible field values
-            change. <a data-link-for="CRStruct">acknowledge()</a> MUST dispatch
-            <a>ack event</a>, and
-            <a data-link-for="CRStruct">snapshot()</a> MUST dispatch
-            <a>snapshot event</a>.
+            Reading <code>struct.key</code> returns the current visible
+            <a>field value</a> copy for that key. Writing
+            <code>struct.key = value</code> runs a one-field local overwrite.
+            Deleting <code>delete struct.key</code> resets that field to its
+            default value.
           </p>
         </section>
 
-        <section>
-          <h3>Auxiliary Algorithms</h3>
-
-          <section>
-            <h4><dfn>parse a snapshot entry</dfn></h4>
-            <ol class="algorithm">
-              <li>
-                If the candidate value is not a record, then return failure.
-              </li>
-              <li>
-                If the candidate value does not have its own
-                <code>__value</code>
-                member, then return failure.
-              </li>
-              <li>
-                If the candidate value's <code>__uuidv7</code> member is not a
-                valid <a>UUIDv7 identifier</a>, then return failure.
-              </li>
-              <li>
-                If the candidate value's <code>__after</code> member is not a
-                valid <a>UUIDv7 identifier</a>, then return failure.
-              </li>
-              <li>
-                If the candidate value's <code>__overwrites</code> member is not
-                a list, then return failure.
-              </li>
-              <li>
-                If the candidate value's <code>__value</code> member cannot be
-                copied with <code>structuredClone</code>, then return failure.
-              </li>
-              <li>
-                If the cloned candidate value does not have the same runtime
-                prototype category as the corresponding default value, then
-                return failure.
-              </li>
-              <li>Let <var>overwrites</var> be a new empty set.</li>
-              <li>
-                For each listed overwrite, ignore non-UUIDv7 values and the
-                candidate's own <code>__uuidv7</code>; add the rest to
-                <var>overwrites</var>.
-              </li>
-              <li>
-                If <var>overwrites</var> does not contain <code>__after</code>,
-                then return failure.
-              </li>
-              <li>Return the normalized field entry.</li>
-            </ol>
-          </section>
-
-          <section>
-            <h4><dfn>serialize a state entry</dfn></h4>
-            <p>
-              Return a new snapshot entry whose scalar members equal the field
-              entry, whose <code>__value</code> member is a detached structured
-              clone of the current field value, and whose
-              <code>__overwrites</code> is a list created from the overwrite set
-              in iteration order.
-            </p>
-          </section>
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">merge()</dfn></h5>
+          <p>
+            Merge the supplied <a>delta</a> into the internal replica and
+            dispatch any resulting <a>delta event</a> or <a>change event</a>.
+          </p>
         </section>
 
-        <section>
-          <h3>Methods</h3>
-
-          <section>
-            <h5><dfn class="lint-ignore">Constructor</dfn></h5>
-            <ol class="algorithm">
-              <li>
-                Attempt to copy <var>defaults</var> with
-                <code>structuredClone</code>.
-              </li>
-              <li>
-                If copying fails, throw <code>CRStructError</code> with code
-                <code>DEFAULTS_NOT_CLONEABLE</code>.
-              </li>
-              <li>Store the cloned defaults as the <a>default struct</a>.</li>
-              <li>Initialize live state and state entries as empty objects.</li>
-              <li>
-                If <var>snapshot</var> is a record, then for each field key in
-                the default struct attempt to <a>parse a snapshot entry</a> from
-                the matching incoming value. If parsing succeeds, adopt that
-                entry.
-              </li>
-              <li>
-                For every field key not adopted from the incoming snapshot, set
-                the live value to the default value and create a fresh current
-                field entry with a fresh <code>__uuidv7</code>, a fresh
-                synthetic root in <code>__after</code>, and an overwrite set
-                containing only that synthetic root.
-              </li>
-            </ol>
-
-            <h5><dfn class="lint-ignore">create()</dfn></h5>
-            <p>
-              Return a new <code>CRStruct</code> constructed from the arguments.
-            </p>
-
-            <h5><dfn class="lint-ignore">read()</dfn></h5>
-            <p>
-              Return a detached structured clone of the current visible value
-              for key.
-            </p>
-
-            <h5><dfn>update()</dfn></h5>
-            <ol class="algorithm">
-              <li>
-                Attempt to copy the supplied value with
-                <code>structuredClone</code>.
-              </li>
-              <li>
-                If copying fails, throw <code>CRStructError</code> with code
-                <code>VALUE_NOT_CLONEABLE</code>.
-              </li>
-              <li>
-                If the copied value does not have the same runtime prototype
-                category as the corresponding default value, throw
-                <code>CRStructError</code> with code
-                <code>VALUE_TYPE_MISMATCH</code>.
-              </li>
-              <li>Let <var>delta</var> be a new empty <a>delta</a>.</li>
-              <li>Let <var>changes</var> be a new empty changes object.</li>
-              <li>
-                Mint a fresh UUIDv7 for key, move the previous UUIDv7 into
-                <code>__after</code> and <code>__overwrites</code>, and set the
-                field's current value to the copied payload.
-              </li>
-              <li>
-                Set <var>delta</var>[key] to the result of
-                <a>serialize a state entry</a> on the current field entry.
-              </li>
-              <li>
-                Set <var>changes</var>[key] to a detached structured clone of
-                the copied payload.
-              </li>
-              <li>
-                Dispatch a <a>delta event</a> whose detail is <var>delta</var>.
-              </li>
-              <li>
-                Dispatch a <a>change event</a> whose detail is
-                <var>changes</var>.
-              </li>
-            </ol>
-          </section>
-
-
-            <h5><dfn>delete()</dfn></h5>
-            <ol class="algorithm">
-              <li>Let <var>delta</var> be a new empty <a>delta</a>.</li>
-              <li>Let <var>changes</var> be a new empty changes object.</li>
-              <li>
-                If key is not <code>undefined</code> and is unknown in the
-                default struct, then return.
-              </li>
-              <li>
-                If key is provided, overwrite that field with its default value
-                and record the result in <var>delta</var> and
-                <var>changes</var>.
-              </li>
-              <li>
-                Otherwise, for each field in the default struct, overwrite that
-                field with its default value and record the results in
-                <var>delta</var> and <var>changes</var>.
-              </li>
-              <li>
-                Dispatch a <a>delta event</a> whose detail is <var>delta</var>.
-              </li>
-              <li>
-                Dispatch a <a>change event</a> whose detail is
-                <var>changes</var>.
-              </li>
-            </ol>
-          </section>
-
-          <section data-dfn-for="CRStruct">
-            <h5><dfn class="lint-ignore">merge()</dfn></h5>
-            <ol class="algorithm">
-              <li>If replica is null, not an object, or a list, return.</li>
-              <li>Let outgoing delta and changes be empty objects.</li>
-              <li>
-                Let <var>hasDelta</var> and <var>hasChange</var> be false.
-              </li>
-              <li>
-                For each own key in the incoming replica:
-                <ol>
-                  <li>If the key is unknown locally, continue.</li>
-                  <li>
-                    Parse the candidate entry. If parsing fails, continue.
-                  </li>
-                  <li>Let <var>target</var> be the local field state entry.</li>
-                  <li>
-                    Let <var>current</var> be a copy of <var>target</var>.
-                  </li>
-                  <li>
-                    Let <var>frontier</var> be the lexicographically greatest
-                    identifier currently in <var>target</var>'s overwrite set,
-                    or the empty string if the set is empty.
-                  </li>
-                  <li>
-                    For each overwrite in the candidate overwrite set, if the
-                    overwrite is less than or equal to <var>frontier</var> or is
-                    already present locally, continue; otherwise add it to
-                    <var>target</var>'s overwrite set.
-                  </li>
-                  <li>
-                    If <var>target</var>'s overwrite set now contains the
-                    candidate UUIDv7, continue.
-                  </li>
-                  <li>
-                    If <var>current</var> and the candidate share the same UUID,
-                    then:
-                    <ol>
-                      <li>
-                        If <var>current</var>'s predecessor identifier is
-                        lexicographically less than the candidate predecessor
-                        identifier, then adopt the candidate value and
-                        predecessor, add that predecessor to the overwrite set,
-                        update live state, write a detached clone into outgoing
-                        changes, set <var>hasChange</var> to true, and continue.
-                      </li>
-                      <li>
-                        Otherwise, mint a fresh local overwrite using the
-                        current visible value, place the resulting serialized
-                        entry in outgoing delta, set <var>hasDelta</var> to
-                        true, and continue.
-                      </li>
-                    </ol>
-                  </li>
-                  <li>
-                    Otherwise, if any of the following is true, adopt the
-                    candidate: the local current UUID equals the candidate
-                    predecessor identifier; the local overwrite set already
-                    contains the local current UUID; or the candidate UUID is
-                    lexicographically greater than the local current UUID.
-                  </li>
-                  <li>
-                    When the candidate is adopted, set the target UUID, value,
-                    and predecessor to the candidate values; add the candidate
-                    predecessor and previous local current UUID to the overwrite
-                    set; update live state; write a detached clone into outgoing
-                    changes; set <var>hasChange</var> to true; and continue.
-                  </li>
-                  <li>
-                    Otherwise add the candidate UUID to the local overwrite set,
-                    place the serialized local state entry in outgoing delta,
-                    and set <var>hasDelta</var> to true.
-                  </li>
-                </ol>
-              </li>
-              <li>
-                If <var>hasDelta</var> is true, dispatch <a>delta event</a>.
-              </li>
-              <li>
-                If <var>hasChange</var> is true, dispatch <a>change event</a>.
-              </li>
-            </ol>
-          </section>
-
-          <section data-dfn-for="CRStruct">
-            <h5><dfn class="lint-ignore">acknowledge()</dfn></h5>
-            <ol class="algorithm">
-              <li>Let <var>ack</var> be a new empty acknowledgement object.</li>
-              <li>
-                For each local field state entry, compute the lexicographically
-                greatest overwritten identifier presently known for that field.
-              </li>
-              <li>
-                Set the corresponding key in <var>ack</var> to that identifier.
-              </li>
-              <li>
-                Dispatch an <a>ack event</a> whose detail is <var>ack</var>.
-              </li>
-            </ol>
-          </section>
-
-          <section data-dfn-for="CRStruct">
-            <h5><dfn class="lint-ignore">garbageCollect()</dfn></h5>
-            <ol class="algorithm">
-              <li>
-                If <var>frontiers</var> is not a list or is empty, return.
-              </li>
-              <li>
-                Let <var>smallestAcknowledgementsPerKey</var> be a new empty
-                acknowledgement object.
-              </li>
-              <li>
-                For each frontier in <var>frontiers</var>, and for each own
-                entry in that frontier:
-                <ol>
-                  <li>If the key is unknown locally, continue.</li>
-                  <li>
-                    If the value is not a valid <a>UUIDv7 identifier</a>,
-                    continue.
-                  </li>
-                  <li>
-                    If there is already a stored acknowledgement for that key
-                    and it is less than or equal to the incoming value,
-                    continue.
-                  </li>
-                  <li>
-                    Otherwise replace the stored acknowledgement for that key
-                    with the incoming value.
-                  </li>
-                </ol>
-              </li>
-              <li>
-                For each acknowledged key in
-                <var>smallestAcknowledgementsPerKey</var>, remove every
-                overwritten identifier in the local field state entry that is
-                less than or equal to the stored acknowledgement, except the
-                field's current predecessor identifier.
-              </li>
-            </ol>
-          </section>
-
-          <section data-dfn-for="CRStruct">
-            <h5><dfn class="lint-ignore">snapshot()</dfn></h5>
-            <p>
-              Run <a>serialize a state entry</a> on every current field entry,
-              assemble the results into a full <a>snapshot</a>, and dispatch a
-              <a>snapshot event</a>. The method returns <code>undefined</code>.
-            </p>
-          </section>
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">acknowledge()</dfn></h5>
+          <p>
+            Compute the current per-field <a>acknowledgement frontier</a> and
+            dispatch an <a>ack event</a>.
+          </p>
         </section>
 
-    
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">garbageCollect()</dfn></h5>
+          <p>
+            Run the core garbage-collection algorithm with the supplied list of
+            acknowledgement frontiers.
+          </p>
+        </section>
 
-          <section data-dfn-for="CRStruct">
-            <h5><dfn class="lint-ignore">keys()</dfn></h5>
-            <p>Return the known field keys from live state.</p>
-          </section>
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">snapshot()</dfn></h5>
+          <p>
+            Create the current full <a>snapshot</a> and dispatch a
+            <a>snapshot event</a>. The method returns <code>undefined</code>.
+          </p>
+        </section>
 
-          <section data-dfn-for="CRStruct">
-            <h5><dfn class="lint-ignore">values()</dfn></h5>
-            <p>
-              Return detached structured clones of the current visible field
-              values.
-            </p>
-          </section>
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">keys()</dfn></h5>
+          <p>Return the current <a>field key</a>(s) as a list of strings.</p>
+        </section>
 
-          <section data-dfn-for="CRStruct">
-            <h5><dfn class="lint-ignore">entries()</dfn></h5>
-            <p>
-              Return key-value pairs where each value is a detached structured
-              clone of the current visible field value.
-            </p>
-          </section>
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">clear()</dfn></h5>
+          <p>
+            Reset every field in the replica back to its default value and
+            dispatch the resulting <a>delta event</a> and <a>change event</a>.
+          </p>
+        </section>
 
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">clone()</dfn></h5>
+          <p>
+            Return a detached plain object containing the current visible field
+            values keyed by their field names.
+          </p>
+        </section>
 
-          <section data-dfn-for="CRStruct">
-            <h5>
-              <dfn class="lint-ignore">addEventListener()</dfn> and
-              <dfn class="lint-ignore">removeEventListener()</dfn>
-            </h5>
-            <p>
-              Forward listener registration and listener removal to the
-              binding's internal <code>EventTarget</code> object using the
-              provided type, listener, and options values.
-            </p>
-          </section>
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">values()</dfn></h5>
+          <p>Return detached copies of the current visible field values.</p>
+        </section>
+
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">entries()</dfn></h5>
+          <p>
+            Return detached <code>[key, value]</code> pairs for the current
+            visible fields.
+          </p>
+        </section>
+
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">@@iterator</dfn></h5>
+          <p>
+            Iterate detached <code>[key, value]</code> pairs for the current
+            visible fields.
+          </p>
+        </section>
+
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">toJSON()</dfn></h5>
+          <p>
+            Return the same serialized shape as <a>snapshot</a>. This is the
+            value used by <code>JSON.stringify</code>.
+          </p>
+        </section>
+
+        <section data-dfn-for="CRStruct">
+          <h5><dfn class="export">toString()</dfn></h5>
+          <p>Return the JSON string form of the current <a>snapshot</a>.</p>
+        </section>
+
+        <section data-dfn-for="CRStruct">
+          <h5>
+            <dfn class="export">addEventListener()</dfn> and
+            <dfn class="export">removeEventListener()</dfn>
+          </h5>
+          <p>
+            Forward listener registration and listener removal to the binding's
+            internal <code>EventTarget</code> object using the provided type,
+            listener, and options values.
+          </p>
         </section>
       </section>
     </section>
