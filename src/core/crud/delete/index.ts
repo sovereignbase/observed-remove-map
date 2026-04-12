@@ -1,5 +1,5 @@
 import { overwriteAndReturnSnapshotEntry } from '../../../.helpers/index.js'
-import {
+import type {
   CRStructState,
   CRStructDelta,
   CRStructChange,
