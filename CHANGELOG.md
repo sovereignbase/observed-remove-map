@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/sovereignbase/convergent-replicated-struct/compare/v1.1.2...v1.1.3) (2026-04-14)
+
+
+### Bug Fixes
+
+* added a test to ensure change event payload mutation safety. ([40abc98](https://github.com/sovereignbase/convergent-replicated-struct/commit/40abc988d7aa46c4862a99c761ca11a698fbcb73))
+
 ## [1.1.2](https://github.com/sovereignbase/convergent-replicated-struct/compare/v1.1.1...v1.1.2) (2026-04-13)
 
 
