@@ -79,7 +79,7 @@ export function readAck(replica) {
 }
 
 export function readState(replica) {
-  const descriptor = Reflect.getOwnPropertyDescriptor(replica, 'state')
+  const descriptor = Reflect.getOwnPropertyDescriptor(replica, '__state')
   assert.ok(descriptor)
   return descriptor.value
 }

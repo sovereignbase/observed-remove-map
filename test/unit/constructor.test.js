@@ -25,12 +25,12 @@ test('constructor starts from defaults and exposes proxy-backed field reflection
   assert.deepEqual(enumerated, ['name', 'count', 'meta', 'tags'])
 
   const ownKeys = Reflect.ownKeys(replica)
-  for (const key of ['state', 'eventTarget', 'name', 'count', 'meta', 'tags']) {
+  for (const key of ['__state', '__eventTarget', 'name', 'count', 'meta', 'tags']) {
     assert.equal(ownKeys.includes(key), true)
   }
   assert.equal(new Set(ownKeys).size, ownKeys.length)
 
-  const stateDescriptor = Object.getOwnPropertyDescriptor(replica, 'state')
+  const stateDescriptor = Object.getOwnPropertyDescriptor(replica, '__state')
   assert.equal(stateDescriptor.enumerable, false)
   const nameDescriptor = Object.getOwnPropertyDescriptor(replica, 'name')
   assert.equal(nameDescriptor.enumerable, true)
@@ -94,4 +94,12 @@ test('constructor filters invalid and self tombstones from accepted entries', ()
 
   assert.equal(target.name, 'alice')
   assert.deepEqual(hydrated.name.tombstones, [snapshot.name.predecessor])
+})
+
+test('constructor allows public state and eventTarget field keys without proxy invariant breaks', () => {
+  const replica = new CRStruct({ state: 1, eventTarget: 2 })
+  assert.equal(replica.state, 1)
+  assert.equal(replica.eventTarget, 2)
+  assert.equal(JSON.stringify(replica).includes('"state"'), true)
+  assert.equal(new Set(Reflect.ownKeys(replica)).size, Reflect.ownKeys(replica).length)
 })

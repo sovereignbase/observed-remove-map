@@ -415,8 +415,8 @@ export async function runCRStructSuite(api, options = {}) {
 
       const ownKeys = Reflect.ownKeys(replica)
       for (const key of [
-        'state',
-        'eventTarget',
+        '__state',
+        '__eventTarget',
         'name',
         'count',
         'meta',
@@ -441,10 +441,16 @@ export async function runCRStructSuite(api, options = {}) {
     assertEqual('ghost' in replica, false)
     assertEqual(Reflect.set(replica, 'ghost', 'bad'), false)
     assertEqual(Reflect.deleteProperty(replica, 'ghost'), false)
-    assertEqual(
-      Reflect.set(replica, 'name', () => {}),
-      false
-    )
+    try {
+      Reflect.set(replica, 'name', () => {})
+      throw new Error('expected write error')
+    } catch (error) {
+      if (error instanceof Error && error.message === 'expected write error') {
+        throw error
+      }
+      assertEqual(error.name, 'CRStructError')
+      assertEqual(error.code, 'VALUE_NOT_CLONEABLE')
+    }
     assertEqual(Reflect.deleteProperty(replica, 'tags'), true)
 
     events.delta[0].meta.value.enabled = false

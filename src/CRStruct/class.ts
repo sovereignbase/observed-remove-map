@@ -6,6 +6,7 @@ import type {
   CRStructState,
   CRStructAck,
 } from '../.types/index.js'
+import { CRStructError } from '../.errors/class.js'
 
 import {
   __merge,
@@ -19,8 +20,8 @@ import { __create, __read, __update, __delete } from '../core/crud/index.js'
  * Runtime implementation for a proxy-backed CR-Struct replica.
  */
 class CRStructRaw<T extends Record<string, unknown>> {
-  declare private readonly state: CRStructState<T>
-  declare private readonly eventTarget: EventTarget
+  declare private readonly __state: CRStructState<T>
+  declare private readonly __eventTarget: EventTarget
 
   /**
    * Creates a replica from default values and an optional snapshot.
@@ -34,13 +35,13 @@ class CRStructRaw<T extends Record<string, unknown>> {
    */
   constructor(defaults: T, snapshot?: CRStructSnapshot<T>) {
     Object.defineProperties(this, {
-      state: {
+      __state: {
         value: __create<T>(defaults, snapshot),
         enumerable: false,
         configurable: false,
         writable: false,
       },
-      eventTarget: {
+      __eventTarget: {
         value: new EventTarget(),
         enumerable: false,
         configurable: false,
@@ -53,7 +54,7 @@ class CRStructRaw<T extends Record<string, unknown>> {
         // Preserve normal property access for unknown keys.
         if (typeof key !== 'string' || !keys.has(key))
           return Reflect.get(target, key, receiver)
-        return __read(key, target.state)
+        return __read(key, target.__state)
       },
       has(target, key) {
         // Preserve normal property checks for unknown keys.
@@ -64,36 +65,37 @@ class CRStructRaw<T extends Record<string, unknown>> {
       set(target, key, value) {
         if (typeof key !== 'string' || !keys.has(key)) return false
         try {
-          const result = __update<T>(key, value, target.state)
+          const result = __update<T>(key, value, target.__state)
           /* c8 ignore next -- __update either throws or returns a result object. */
           if (!result) return false
           const { delta, change } = result
           if (delta)
-            void target.eventTarget.dispatchEvent(
+            void target.__eventTarget.dispatchEvent(
               new CustomEvent('delta', { detail: delta })
             )
           if (change)
-            void target.eventTarget.dispatchEvent(
+            void target.__eventTarget.dispatchEvent(
               new CustomEvent('change', { detail: change })
             )
           return true
-        } catch {
+        } catch (error) {
+          if (error instanceof CRStructError) throw error
           return false
         }
       },
       deleteProperty(target, key) {
         if (typeof key !== 'string' || !keys.has(key)) return false
         try {
-          const result = __delete<T>(target.state, key)
+          const result = __delete<T>(target.__state, key)
           if (!result) return false
           const { delta, change } = result
           if (delta) {
-            void target.eventTarget.dispatchEvent(
+            void target.__eventTarget.dispatchEvent(
               new CustomEvent('delta', { detail: delta })
             )
           }
           if (change) {
-            void target.eventTarget.dispatchEvent(
+            void target.__eventTarget.dispatchEvent(
               new CustomEvent('change', { detail: change })
             )
           }
@@ -105,7 +107,7 @@ class CRStructRaw<T extends Record<string, unknown>> {
       ownKeys(target) {
         return [
           ...Reflect.ownKeys(target),
-          ...Reflect.ownKeys(target.state.defaults),
+          ...Reflect.ownKeys(target.__state.defaults),
         ]
       },
       getOwnPropertyDescriptor(target, key) {
@@ -113,7 +115,7 @@ class CRStructRaw<T extends Record<string, unknown>> {
         if (typeof key !== 'string' || !keys.has(key))
           return Reflect.getOwnPropertyDescriptor(target, key)
         return {
-          value: __read(key, target.state),
+          value: __read(key, target.__state),
           writable: true,
           enumerable: true,
           configurable: true,
@@ -128,16 +130,16 @@ class CRStructRaw<T extends Record<string, unknown>> {
    * @param crStructDelta - The partial serialized field state to merge.
    */
   merge(crStructDelta: CRStructDelta<T>): void {
-    const result = __merge<T>(crStructDelta, this.state)
+    const result = __merge<T>(crStructDelta, this.__state)
     if (!result) return
     const { delta, change } = result
     if (delta) {
-      void this.eventTarget.dispatchEvent(
+      void this.__eventTarget.dispatchEvent(
         new CustomEvent('delta', { detail: delta })
       )
     }
     if (change) {
-      void this.eventTarget.dispatchEvent(
+      void this.__eventTarget.dispatchEvent(
         new CustomEvent('change', { detail: change })
       )
     }
@@ -147,9 +149,9 @@ class CRStructRaw<T extends Record<string, unknown>> {
    * Emits the current acknowledgement frontier for each field.
    */
   acknowledge(): void {
-    const ack = __acknowledge<T>(this.state)
+    const ack = __acknowledge<T>(this.__state)
     if (ack) {
-      void this.eventTarget.dispatchEvent(
+      void this.__eventTarget.dispatchEvent(
         new CustomEvent('ack', { detail: ack })
       )
     }
@@ -161,16 +163,16 @@ class CRStructRaw<T extends Record<string, unknown>> {
    * @param frontiers - A collection of acknowledgement frontiers to compact against.
    */
   garbageCollect(frontiers: Array<CRStructAck<T>>): void {
-    void __garbageCollect<T>(frontiers, this.state)
+    void __garbageCollect<T>(frontiers, this.__state)
   }
 
   /**
    * Emits a serialized snapshot of the current replica state.
    */
   snapshot(): void {
-    const snapshot = __snapshot<T>(this.state)
+    const snapshot = __snapshot<T>(this.__state)
     if (snapshot) {
-      void this.eventTarget.dispatchEvent(
+      void this.__eventTarget.dispatchEvent(
         new CustomEvent('snapshot', { detail: snapshot })
       )
     }
@@ -182,23 +184,23 @@ class CRStructRaw<T extends Record<string, unknown>> {
    * @returns The field keys in the current replica.
    */
   keys<K extends keyof T>(): Array<K> {
-    return Object.keys(this.state.entries) as Array<K>
+    return Object.keys(this.__state.entries) as Array<K>
   }
 
   /**
    * Resets every field in the replica back to its default value.
    */
   clear(): void {
-    const result = __delete(this.state)
+    const result = __delete(this.__state)
     if (result) {
       const { delta, change } = result
       if (delta) {
-        void this.eventTarget.dispatchEvent(
+        void this.__eventTarget.dispatchEvent(
           new CustomEvent('delta', { detail: delta })
         )
       }
       if (change) {
-        void this.eventTarget.dispatchEvent(
+        void this.__eventTarget.dispatchEvent(
           new CustomEvent('change', { detail: change })
         )
       }
@@ -212,7 +214,7 @@ class CRStructRaw<T extends Record<string, unknown>> {
    */
   clone(): T {
     const out = {} as T
-    for (const [key, entry] of Object.entries(this.state.entries)) {
+    for (const [key, entry] of Object.entries(this.__state.entries)) {
       out[key as keyof T] = structuredClone(entry.value as T[keyof T])
     }
     return out
@@ -224,7 +226,7 @@ class CRStructRaw<T extends Record<string, unknown>> {
    * @returns The current field values.
    */
   values<K extends keyof T>(): Array<T[K]> {
-    return Object.values(this.state.entries).map((entry) =>
+    return Object.values(this.__state.entries).map((entry) =>
       structuredClone(entry.value)
     ) as Array<T[K]>
   }
@@ -235,7 +237,7 @@ class CRStructRaw<T extends Record<string, unknown>> {
    * @returns The current field entries.
    */
   entries<K extends keyof T>(): Array<[K, T[K]]> {
-    return Object.entries(this.state.entries).map(([key, entry]) => [
+    return Object.entries(this.__state.entries).map(([key, entry]) => [
       key as K,
       structuredClone(entry.value as T[K]),
     ])
@@ -247,7 +249,7 @@ class CRStructRaw<T extends Record<string, unknown>> {
    * Called automatically by `JSON.stringify`.
    */
   toJSON(): CRStructSnapshot<T> {
-    return __snapshot<T>(this.state)
+    return __snapshot<T>(this.__state)
   }
   /**
    * Returns this replica as a JSON string.
@@ -271,7 +273,7 @@ class CRStructRaw<T extends Record<string, unknown>> {
    * Iterates over the current live field entries.
    */
   *[Symbol.iterator](): IterableIterator<[keyof T, T[keyof T]]> {
-    for (const [key, entry] of Object.entries(this.state.entries)) {
+    for (const [key, entry] of Object.entries(this.__state.entries)) {
       yield [key, structuredClone(entry.value)]
     }
   }
@@ -288,7 +290,7 @@ class CRStructRaw<T extends Record<string, unknown>> {
     listener: CRStructEventListenerFor<T, K> | null,
     options?: boolean | AddEventListenerOptions
   ): void {
-    this.eventTarget.addEventListener(
+    this.__eventTarget.addEventListener(
       type,
       listener as EventListenerOrEventListenerObject | null,
       options
@@ -307,7 +309,7 @@ class CRStructRaw<T extends Record<string, unknown>> {
     listener: CRStructEventListenerFor<T, K> | null,
     options?: boolean | EventListenerOptions
   ): void {
-    this.eventTarget.removeEventListener(
+    this.__eventTarget.removeEventListener(
       type,
       listener as EventListenerOrEventListenerObject | null,
       options

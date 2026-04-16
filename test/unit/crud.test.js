@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  assertCRStructError,
   assertSnapshotShape,
   captureEvents,
   createReplica,
@@ -105,9 +106,9 @@ test('proxy reflection json and defensive false branches stay coherent', () => {
   assert.equal(Reflect.get(replica, 'ghost'), undefined)
   assert.equal(Reflect.set(replica, 'ghost', 'bad'), false)
   assert.equal(Reflect.deleteProperty(replica, 'ghost'), false)
-  assert.equal(
-    Reflect.set(replica, 'name', () => {}),
-    false
+  assert.throws(
+    () => Reflect.set(replica, 'name', () => {}),
+    (error) => assertCRStructError(error, 'VALUE_NOT_CLONEABLE')
   )
   assert.equal(replica.name, '')
 

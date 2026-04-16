@@ -1,4 +1,4 @@
-[![npm version](https://img.shields.io/npm/v/@sovereignbase/convergent-replicated-list)](https://www.npmjs.com/package/@sovereignbase/convergent-replicated-struct)
+[![npm version](https://img.shields.io/npm/v/@sovereignbase/convergent-replicated-struct)](https://www.npmjs.com/package/@sovereignbase/convergent-replicated-struct)
 [![CI](https://github.com/sovereignbase/convergent-replicated-struct/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/sovereignbase/convergent-replicated-struct/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/sovereignbase/convergent-replicated-struct/branch/master/graph/badge.svg)](https://codecov.io/gh/sovereignbase/convergent-replicated-struct)
 [![license](https://img.shields.io/npm/l/@sovereignbase/convergent-replicated-struct)](LICENSE)
@@ -58,26 +58,30 @@ type TodoStruct = {
   tags: string[]
 }
 
-const aliceMeta = new CRStruct<MetaStruct>({done: false})
+const aliceMeta = new CRStruct<MetaStruct>({ done: false })
 
 const alice = new CRStruct<TodoStruct>({
   title: '',
   count: 0,
-  meta: aliceMeta.toJSON()
+  meta: aliceMeta.toJSON(),
   tags: [],
 })
 
-const bobMeta = new CRStruct<MetaStruct>({done: false})
+const bobMeta = new CRStruct<MetaStruct>({ done: false })
 
 const bob = new CRStruct<TodoStruct>({
   title: '',
   count: 0,
-  meta: bobMeta.toJSON()
+  meta: bobMeta.toJSON(),
   tags: [],
 })
 
 alice.addEventListener('delta', (event) => {
   bob.merge(event.detail)
+})
+
+bob.addEventListener('change', (event) => {
+  if (event.detail.meta) bobMeta.merge(event.detail.meta)
 })
 
 aliceMeta.done = true
@@ -286,7 +290,8 @@ The intended split is:
 
 ### Validation and errors
 
-Low-level exports can throw `CRStructError` with stable error codes:
+Low-level exports and invalid public field writes can throw `CRStructError`
+with stable error codes:
 
 - `DEFAULTS_NOT_CLONEABLE`
 - `VALUE_NOT_CLONEABLE`

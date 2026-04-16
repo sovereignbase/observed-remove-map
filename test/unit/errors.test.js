@@ -89,9 +89,12 @@ test('captured CRStructError constructor falls back to the code when message is 
   assert.match(error.message, /VALUE_TYPE_MISMATCH/)
 })
 
-test('public invalid property assignment returns false through Reflect.set and preserves state', () => {
+test('public invalid property assignment throws CRStructError and preserves state', () => {
   const replica = createReplica()
 
-  assert.equal(Reflect.set(replica, 'count', 'bad'), false)
+  assert.throws(
+    () => Reflect.set(replica, 'count', 'bad'),
+    (error) => assertCRStructError(error, 'VALUE_TYPE_MISMATCH')
+  )
   assert.equal(replica.count, 0)
 })
