@@ -395,8 +395,8 @@
         largest retained <a>field tombstone</a> under lexicographic comparison.
       </p>
       <p>
-        A <dfn>snapshot</dfn> is the full <a>serializable object</a> form of
-        the current <a>CR-Struct replica</a>.
+        A <dfn>snapshot</dfn> is the full <a>serializable object</a> form of the
+        current <a>CR-Struct replica</a>.
       </p>
       <p>
         A <dfn>delta</dfn> is a partial <a>snapshot</a> containing only the
@@ -477,7 +477,7 @@
     </section>
 
     <section>
-      <h2>Algorithms</h2>
+      <h2>Core Algorithms</h2>
 
       <section>
         <h3>CRUD</h3>
@@ -872,8 +872,8 @@ typedef record&lt;DOMString, DOMString&gt; CRStructAck;
           <code>JSON.stringify(struct)</code> serializes the binding through
           that snapshot. <code>for...of</code> iterates detached
           <code>[key, value]</code> pairs for the current live fields, and
-          <code>toString()</code> attempts to return the JSON string form of
-          the current snapshot.
+          <code>toString()</code> attempts to return the JSON string form of the
+          current snapshot.
         </p>
       </section>
 
