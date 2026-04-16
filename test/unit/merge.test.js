@@ -77,9 +77,8 @@ test('merge adopts a direct successor and emits change', () => {
   target.merge(delta)
 
   assert.equal(target.name, 'alice')
-  assert.equal(targetEvents.events.delta.length, 1)
+  assert.equal(targetEvents.events.delta.length, 0)
   assert.equal(targetEvents.events.change.length, 1)
-  assert.deepEqual(targetEvents.events.delta[0], {})
   assert.deepEqual(targetEvents.events.change[0], { name: 'alice' })
 })
 
@@ -116,8 +115,7 @@ test('merge keeps the current winner and emits a rebuttal delta for stale concur
 
   assert.equal(newer.name, 'newer')
   assert.equal(newerEvents.events.delta.length, 1)
-  assert.equal(newerEvents.events.change.length, 1)
-  assert.deepEqual(newerEvents.events.change[0], {})
+  assert.equal(newerEvents.events.change.length, 0)
 
   older.merge(newerEvents.events.delta[0])
 
@@ -141,9 +139,8 @@ test('merge adopts a same-uuid candidate with a greater predecessor identifier',
   replica.merge({ name: snapshot.name })
 
   assert.equal(replica.name, 'remote')
-  assert.equal(events.delta.length, 1)
+  assert.equal(events.delta.length, 0)
   assert.equal(events.change.length, 1)
-  assert.deepEqual(events.delta[0], {})
   assert.deepEqual(events.change[0], { name: 'remote' })
 })
 
@@ -158,6 +155,5 @@ test('merge repairs a same-uuid conflict with a stale predecessor identifier', (
 
   assert.equal(replica.name, 'local')
   assert.equal(events.delta.length, 1)
-  assert.equal(events.change.length, 1)
-  assert.deepEqual(events.change[0], {})
+  assert.equal(events.change.length, 0)
 })

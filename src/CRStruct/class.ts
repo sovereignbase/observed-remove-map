@@ -133,12 +133,12 @@ class CRStructRaw<T extends Record<string, unknown>> {
     const result = __merge<T>(crStructDelta, this.__state)
     if (!result) return
     const { delta, change } = result
-    if (delta) {
+    if (Object.keys(delta).length > 0) {
       void this.__eventTarget.dispatchEvent(
         new CustomEvent('delta', { detail: delta })
       )
     }
-    if (change) {
+    if (Object.keys(change).length > 0) {
       void this.__eventTarget.dispatchEvent(
         new CustomEvent('change', { detail: change })
       )
