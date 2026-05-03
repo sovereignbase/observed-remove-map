@@ -35,7 +35,8 @@ import { v7 as uuidv7 } from 'uuid'
  */
 export function __create<T extends Record<string, unknown>>(
   defaults: T,
-  snapshot?: CRStructSnapshot<T>
+  snapshot?: CRStructSnapshot<T>,
+  allowMissing: boolean = false
 ): CRStructState<T> {
   const [cloned, copiedDefaults] = safeStructuredClone(defaults)
   if (!cloned)
@@ -62,6 +63,9 @@ export function __create<T extends Record<string, unknown>>(
         continue
       }
     }
+
+    if (allowMissing) continue
+
     const root = uuidv7()
     state.entries[key as keyof T] = {
       uuidv7: uuidv7(),

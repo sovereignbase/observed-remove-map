@@ -25,7 +25,14 @@ test('constructor starts from defaults and exposes proxy-backed field reflection
   assert.deepEqual(enumerated, ['name', 'count', 'meta', 'tags'])
 
   const ownKeys = Reflect.ownKeys(replica)
-  for (const key of ['__state', '__eventTarget', 'name', 'count', 'meta', 'tags']) {
+  for (const key of [
+    '__state',
+    '__eventTarget',
+    'name',
+    'count',
+    'meta',
+    'tags',
+  ]) {
     assert.equal(ownKeys.includes(key), true)
   }
   assert.equal(new Set(ownKeys).size, ownKeys.length)
@@ -101,5 +108,8 @@ test('constructor allows public state and eventTarget field keys without proxy i
   assert.equal(replica.state, 1)
   assert.equal(replica.eventTarget, 2)
   assert.equal(JSON.stringify(replica).includes('"state"'), true)
-  assert.equal(new Set(Reflect.ownKeys(replica)).size, Reflect.ownKeys(replica).length)
+  assert.equal(
+    new Set(Reflect.ownKeys(replica)).size,
+    Reflect.ownKeys(replica).length
+  )
 })

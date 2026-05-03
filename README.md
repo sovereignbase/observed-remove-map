@@ -7,9 +7,8 @@
 
 Convergent Replicated Struct (CR-Struct), a delta CRDT for an fixed-key object structs.
 
-Read the specification:
-
-- https://sovereignbase.dev/convergent-replicated-struct
+- [Check the docs](https://sovereignbase.dev/convergent-replicated-struct/docs/)
+- [Read the specification](https://sovereignbase.dev/convergent-replicated-struct/)
 
 ## Compatibility
 

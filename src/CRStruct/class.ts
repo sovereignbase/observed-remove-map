@@ -33,10 +33,14 @@ class CRStructRaw<T extends Record<string, unknown>> {
    * @param snapshot - An optional serializable snapshot used to hydrate the replica.
    * @throws {CRStructError} Thrown when the default values are not supported by `structuredClone`.
    */
-  constructor(defaults: T, snapshot?: CRStructSnapshot<T>) {
+  constructor(
+    defaults: T,
+    snapshot?: CRStructSnapshot<T>,
+    allowMissing?: boolean
+  ) {
     Object.defineProperties(this, {
       __state: {
-        value: __create<T>(defaults, snapshot),
+        value: __create<T>(defaults, snapshot, allowMissing),
         enumerable: false,
         configurable: false,
         writable: false,
@@ -54,6 +58,8 @@ class CRStructRaw<T extends Record<string, unknown>> {
         // Preserve normal property access for unknown keys.
         if (typeof key !== 'string' || !keys.has(key))
           return Reflect.get(target, key, receiver)
+
+        if (!Object.hasOwn(target.__state.entries, key)) return undefined
         return __read(key, target.__state)
       },
       has(target, key) {
@@ -115,7 +121,9 @@ class CRStructRaw<T extends Record<string, unknown>> {
         if (typeof key !== 'string' || !keys.has(key))
           return Reflect.getOwnPropertyDescriptor(target, key)
         return {
-          value: __read(key, target.__state),
+          value: Object.hasOwn(target.__state.entries, key)
+            ? __read(key, target.__state)
+            : undefined,
           writable: true,
           enumerable: true,
           configurable: true,
@@ -316,12 +324,36 @@ class CRStructRaw<T extends Record<string, unknown>> {
     )
   }
 }
+//ALIASING
 
-export type CRStruct<T extends Record<string, unknown>> = CRStructRaw<T> & T
+type CRStructFields<
+  T extends Record<string, unknown>,
+  AllowMissing extends boolean,
+> = {
+  [K in keyof T]: AllowMissing extends true ? T[K] | undefined : T[K]
+}
+
+export type CRStruct<
+  T extends Record<string, unknown>,
+  AllowMissing extends boolean = false,
+> = CRStructRaw<T> & CRStructFields<T, AllowMissing>
 
 export const CRStruct = CRStructRaw as {
   new <T extends Record<string, unknown>>(
     defaults: T,
-    snapshot?: CRStructSnapshot<T>
-  ): CRStruct<T>
+    snapshot?: CRStructSnapshot<T>,
+    allowMissing?: false | undefined
+  ): CRStruct<T, false>
+
+  new <T extends Record<string, unknown>>(
+    defaults: T,
+    snapshot: CRStructSnapshot<T> | undefined,
+    allowMissing: true
+  ): CRStruct<T, true>
+
+  new <T extends Record<string, unknown>>(
+    defaults: T,
+    snapshot: CRStructSnapshot<T> | undefined,
+    allowMissing: boolean
+  ): CRStruct<T, boolean>
 }

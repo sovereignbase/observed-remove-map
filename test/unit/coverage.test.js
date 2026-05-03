@@ -121,7 +121,10 @@ test('empty struct instances preserve reflection events and serialization semant
 
   assert.deepEqual(replica.keys(), [])
   assert.deepEqual(Object.keys(replica), [])
-  assert.deepEqual(Reflect.ownKeys(replica).sort(), ['__eventTarget', '__state'])
+  assert.deepEqual(Reflect.ownKeys(replica).sort(), [
+    '__eventTarget',
+    '__state',
+  ])
   assert.deepEqual(replica.values(), [])
   assert.deepEqual(replica.entries(), [])
   assert.deepEqual([...replica], [])
